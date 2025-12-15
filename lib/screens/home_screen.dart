@@ -16,23 +16,20 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF0F5F8),
       body: SafeArea(
         child: Column(
           children: [
-            // --- TOP BAR ---
+            // Top bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const SizedBox(width: 24), // Back button ignored
+                  const SizedBox(width: 24),
                   const Text(
                     "Conversations",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
                   ),
                   IconButton(
                     icon: const Icon(Icons.logout),
@@ -41,21 +38,14 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-
-            // --- SEARCH BAR ---
+            // Search bar
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))],
                 ),
                 child: const TextField(
                   decoration: InputDecoration(
@@ -67,17 +57,13 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-
-            // --- CHAT LIST ---
+            // Chat list
             Expanded(
               child: Container(
                 padding: const EdgeInsets.only(top: 10),
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
-                  ),
+                  borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
                 ),
                 child: ListView.separated(
                   physics: const BouncingScrollPhysics(),
@@ -92,22 +78,14 @@ class HomeScreen extends StatelessWidget {
                         backgroundColor: Colors.blueGrey,
                         backgroundImage: NetworkImage("https://via.placeholder.com/150"),
                       ),
-                      title: const Text(
-                        "User Name",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                      title: const Text("User Name", style: TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: const Text(
                         "How is your life going?",
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: const Text(
-                        "12:30 PM",
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                      onTap: () {
-                        // ChatScreen navigation later
-                      },
+                      trailing: const Text("12:30 PM", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      onTap: () {},
                     );
                   },
                 ),
@@ -116,8 +94,6 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
-
-      // --- FLOATING BUTTON ---
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
         backgroundColor: Colors.lightBlueAccent,
