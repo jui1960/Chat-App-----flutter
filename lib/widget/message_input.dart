@@ -1,10 +1,65 @@
 // lib/widget/message_input.dart
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // NEW
+import 'package:firebase_auth/firebase_auth.dart';     // NEW
 
 class MessageInput extends StatelessWidget {
   final String chatId;
 
   const MessageInput({super.key, required this.chatId});
+
+  // New function to handle sending message logic
+  void _sendMessage(BuildContext context, TextEditingController controller) async {
+    final messageText = controller.text.trim();
+    if (messageText.isEmpty) {
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // Handle not logged in case (should not happen if routing is correct)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in.')),
+      );
+      return;
+    }
+
+    final data = {
+      'text': messageText,
+      'timestamp': Timestamp.now(),
+      'senderId': user.uid,
+      'senderName': user.displayName ?? 'Anonymous',
+    };
+
+    try {
+      // 1. Save the message to Firestore
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .add(data);
+
+      // 2. Optional: Update the parent chat document with the last message info
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(chatId)
+          .set({
+        'lastMessage': messageText,
+        'lastMessageTime': Timestamp.now(),
+        // Participants should also be saved here if the chat is new
+      }, SetOptions(merge: true));
+
+      // 3. Clear the input field
+      controller.clear();
+
+    } catch (e) {
+      debugPrint('Error sending message: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send message.')),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -13,27 +68,10 @@ class MessageInput extends StatelessWidget {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
     final inputFillColor = isDarkMode ? const Color(0xFF1E2733) : Colors.white;
     final controller = TextEditingController();
-
-    // --- FIX: Determine hint text color based on theme ---
     final hintTextColor = isDarkMode ? Colors.white : Colors.black;
-    // -----------------------------------------------------
 
-    void sendMessage() {
-      if (controller.text.trim().isNotEmpty) {
-        String message = controller.text;
-        // TODO: Implement actual Firestore send logic
-        debugPrint('Sending message to $chatId: $message');
-        controller.clear();
-      }
-    }
-
-    void startVoiceRecording() {
-      // TODO: Implement voice recording logic
-      debugPrint('Starting voice recording...');
-    }
 
     return Container(
-      // Padding reduced to 3 horizontally to give maximum space
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
       color: scaffoldColor,
       child: Row(
@@ -42,7 +80,6 @@ class MessageInput extends StatelessWidget {
           // 1. Camera Icon (Leftmost)
           IconButton(
             icon: Icon(Icons.camera_alt_outlined, color: primaryColor),
-            // Minimal padding
             padding: const EdgeInsets.only(left: 5, right: 0),
             constraints: const BoxConstraints(minWidth: 30),
             onPressed: () {
@@ -53,16 +90,14 @@ class MessageInput extends StatelessWidget {
           // 2. Voice Record Icon (Next to Camera)
           IconButton(
             icon: Icon(Icons.mic_none, color: primaryColor),
-            // Minimal padding
             padding: const EdgeInsets.only(left: 0, right: 5),
             constraints: const BoxConstraints(minWidth: 30),
-            onPressed: startVoiceRecording,
+            onPressed: () { /* TODO: startVoiceRecording */ },
           ),
 
-          // 3. Text Input Field (Now takes maximum possible space)
+          // 3. Text Input Field
           Expanded(
             child: Container(
-              // Reduced internal left padding of the text field
               padding: const EdgeInsets.only(left: 10),
               height: 45,
               decoration: BoxDecoration(
@@ -72,18 +107,14 @@ class MessageInput extends StatelessWidget {
               ),
               child: TextField(
                 controller: controller,
-                onSubmitted: (_) => sendMessage(),
+                // Use the new send message function
+                onSubmitted: (_) => _sendMessage(context, controller),
                 style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
                 decoration: InputDecoration(
                   hintText: 'Write a message...',
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
-
-                  // --- APPLY FIX: Set the hintStyle color ---
                   hintStyle: TextStyle(color: hintTextColor.withOpacity(0.6)),
-                  // ------------------------------------------
-
-                  // Attachment Icon (Inside)
                   suffixIcon: IconButton(
                     icon: Icon(Icons.attach_file, color: primaryColor, size: 20),
                     onPressed: () {
@@ -97,7 +128,7 @@ class MessageInput extends StatelessWidget {
             ),
           ),
 
-          // 4. Send Button (Outside the text field)
+          // 4. Send Button
           Container(
             margin: const EdgeInsets.only(left: 8),
             decoration: BoxDecoration(
@@ -106,7 +137,8 @@ class MessageInput extends StatelessWidget {
             ),
             child: IconButton(
               icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: sendMessage,
+              // Use the new send message function
+              onPressed: () => _sendMessage(context, controller),
             ),
           ),
         ],

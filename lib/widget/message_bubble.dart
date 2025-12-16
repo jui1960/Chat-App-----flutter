@@ -1,100 +1,179 @@
 // lib/widget/message_bubble.dart
 import 'package:flutter/material.dart';
-
-// --- Data Models ---
-enum MessageType { sent, received }
-
-class Message {
-  final String text;
-  final String time;
-  final MessageType type;
-
-  const Message({required this.text, required this.time, required this.type});
-}
-// --------------------
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class MessageBubble extends StatelessWidget {
   final String chatId;
 
   const MessageBubble({super.key, required this.chatId});
 
-  // Sample Chat Data (Replace with real data later)
-  final List<Message> messages = const [
-    Message(text: "Hello", time: "10:00 AM", type: MessageType.received),
-    Message(text: "How your life is going?", time: "10:01 AM", type: MessageType.received),
-    Message(text: "Not bad at all. I'd be sending it in 5 minutes.", time: "10:03 AM", type: MessageType.sent),
-    Message(text: "Alright b. I'd be expecting it. Well-done.", time: "10:04 AM", type: MessageType.received),
-    Message(text: "Thank you. Check your mail, I just sent it. See you at the office.", time: "10:07 AM", type: MessageType.sent),
-    Message(text: "I'm onw to the meeting. See you there!", time: "10:09 AM", type: MessageType.received),
-    Message(text: "When about you?", time: "10:10 AM", type: MessageType.sent),
-    Message(text: "Not so good.", time: "10:11 AM", type: MessageType.sent),
-  ];
-
-
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).colorScheme.secondary;
+    final currentUser = FirebaseAuth.instance.currentUser;
 
-    return ListView.builder(
-      reverse: true, // Show latest message at the bottom
-      itemCount: messages.length,
-      itemBuilder: (context, index) {
-        final message = messages[messages.length - 1 - index];
-        return _buildSingleMessage(context, message, primaryColor, isDarkMode);
+    if (currentUser == null) {
+      return const Center(child: Text("Please log in to see messages."));
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      // Firestore query: Fetch messages, sorted by timestamp (descending order)
+      stream: FirebaseFirestore.instance
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text("Say hi!"));
+        }
+
+        final loadedMessages = snapshot.data!.docs;
+
+        return ListView.builder(
+          reverse: true, // Display latest messages at the bottom
+          padding: const EdgeInsets.all(8),
+          itemCount: loadedMessages.length,
+          itemBuilder: (context, index) {
+            final message = loadedMessages[index];
+            final messageData = message.data() as Map<String, dynamic>;
+
+            final currentSenderId = messageData['senderId'];
+            final currentMessageText = messageData['text'];
+            final isMe = currentSenderId == currentUser.uid;
+
+            // --- Time Display Logic ---
+            bool shouldShowTime = false;
+            final nextIndex = index + 1;
+
+            // Logic: Show time if this is the last message in the entire list (index 0 in reversed list)
+            // OR if the next message (which is chronologically older) was sent by a different user.
+            if (index == 0) {
+              shouldShowTime = true; // Always show time for the newest message
+            } else if (nextIndex < loadedMessages.length) {
+              final nextMessageSenderId = loadedMessages[nextIndex].get('senderId');
+
+              // Show time if the next (older) message's sender ID is DIFFERENT from the current one.
+              // This marks the end of a consecutive message block.
+              if (nextMessageSenderId != currentSenderId) {
+                shouldShowTime = true;
+              } else {
+                shouldShowTime = false;
+              }
+            } else if (nextIndex == loadedMessages.length) {
+              // This means the current message is the oldest message,
+              // it should show time if it's the start of a block (which it is, by default)
+              shouldShowTime = true;
+            }
+            // ---------------------------
+
+            // --- Message Content Rendering ---
+            return _MessageBubbleContent(
+              key: ValueKey(message.id),
+              message: currentMessageText,
+              isMe: isMe,
+              timestamp: messageData['timestamp'] as Timestamp,
+              shouldShowTime: shouldShowTime,
+            );
+          },
+        );
       },
     );
   }
+}
 
-  Widget _buildSingleMessage(BuildContext context, Message message, Color primaryColor, bool isDarkMode) {
-    final isSent = message.type == MessageType.sent;
-    final bubbleColor = isSent
-        ? primaryColor.withOpacity(0.8)
-        : isDarkMode ? const Color(0xFF283543) : const Color(0xFFF1F1F1);
-    final textColor = isSent ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color;
-    final timeColor = isSent ? Colors.white70 : Colors.grey;
+// এটি হলো মেসেজ বাবল রেন্ডার করার উইজেট
+class _MessageBubbleContent extends StatelessWidget {
+  const _MessageBubbleContent({
+    super.key,
+    required this.message,
+    required this.isMe,
+    required this.timestamp,
+    required this.shouldShowTime,
+  });
 
-    return Align(
-      alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 10.0),
-        child: Column(
-          crossAxisAlignment: isSent ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+  final String message;
+  final bool isMe;
+  final Timestamp timestamp;
+  final bool shouldShowTime;
+
+  @override
+  Widget build(BuildContext context) {
+    // Determine Bubble colors based on isMe and theme
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.secondary;
+
+    final bubbleColor = isMe
+        ? primaryColor
+        : (isDarkMode ? Theme.of(context).colorScheme.surface : Colors.grey.shade300);
+    final textColor = isMe
+        ? Colors.white
+        : (isDarkMode ? Colors.white : Colors.black);
+
+    // Convert Firestore Timestamp to DateTime and format time
+    final messageTime = timestamp.toDate();
+    final timeString = TimeOfDay.fromDateTime(messageTime).format(context); // e.g., "1:02 PM"
+
+    return Column(
+      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
           children: [
+            // Horizontal spacing adjustment
+            if (!isMe) const SizedBox(width: 8),
+
+            // The actual message container
             Container(
-              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
               decoration: BoxDecoration(
                 color: bubbleColor,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(15),
-                  topRight: const Radius.circular(15),
-                  bottomLeft: Radius.circular(isSent ? 15 : 5),
-                  bottomRight: Radius.circular(isSent ? 5 : 15),
+                  topLeft: const Radius.circular(12),
+                  topRight: const Radius.circular(12),
+                  // Grouping visual changes:
+                  // If time is not shown, slightly flatten the corner closest to the next bubble
+                  bottomLeft: isMe ? const Radius.circular(12) : (shouldShowTime ? const Radius.circular(12) : const Radius.circular(4)),
+                  bottomRight: isMe ? (shouldShowTime ? const Radius.circular(12) : const Radius.circular(4)) : const Radius.circular(12),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
               ),
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
               child: Text(
-                message.text,
-                style: TextStyle(color: textColor, fontSize: 16),
+                message,
+                style: TextStyle(
+                  color: textColor,
+                ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 2.0, left: 8.0, right: 8.0),
-              child: Text(
-                message.time,
-                style: TextStyle(color: timeColor, fontSize: 10),
-              ),
-            ),
+
+            if (isMe) const SizedBox(width: 8),
           ],
         ),
-      ),
+
+        // Time Display Implementation
+        if (shouldShowTime)
+          Padding(
+            padding: EdgeInsets.only(
+              left: isMe ? 0 : 16,
+              right: isMe ? 16 : 0,
+              bottom: 12, // Add extra space after the time
+              top: 4,
+            ),
+            child: Text(
+              timeString,
+              style: TextStyle(
+                fontSize: 10,
+                color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

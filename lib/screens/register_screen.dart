@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'home_screen.dart';
-import 'login_screen.dart'; // Ensure you import your LoginScreen here
+import 'login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -27,17 +28,39 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() => loading = true);
     try {
-      // Create user with email and password
+      // 1. Create user with email and password
       UserCredential userCredential =
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailCtrl.text.trim(),
         password: passCtrl.text.trim(),
       );
 
-      // Update display name (optional but good practice)
-      await userCredential.user?.updateDisplayName(nameCtrl.text.trim());
+      // 2. Update display name
+      final user = userCredential.user;
+      final username = nameCtrl.text.trim();
 
-      // Navigate to HomeScreen on successful registration
+      await user?.updateDisplayName(username);
+
+      // 3. Save user data to Firestore 'users' collection
+      if (user != null) {
+        final userData = {
+          'username': username.toLowerCase(), // Lowercase for searching
+          'fullName': username,
+          'email': user.email,
+          'imageUrl': 'https://via.placeholder.com/150', // Default image
+          'userId': user.uid,
+          'createdAt': Timestamp.now(),
+        };
+
+        // Save data to Firestore using UID as the Document ID
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set(userData);
+      }
+      // -------------------------------------------------------------------
+
+      // 4. Navigate to HomeScreen on successful registration
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -53,9 +76,8 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => loading = false);
   }
 
-  // --- New Navigation Function ---
+
   void navigateToLogin() {
-    // We use pushReplacement here so the user can't press back to registration screen
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -71,10 +93,9 @@ class _SignupScreenState extends State<SignupScreen> {
     return Scaffold(
       backgroundColor: darkBackground,
       appBar: AppBar(
-        // Use an automatic leading back button
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: navigateToLogin, // Use the new navigation function
+          onPressed: navigateToLogin,
         ),
         title: const Text('Create New Account', style: TextStyle(color: Colors.white)),
         backgroundColor: darkSurface,
@@ -141,10 +162,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     ? const CircularProgressIndicator(color: primaryColor)
                     : _buildSignupButton(context, signup),
 
-                // --- New Login Link ---
                 const SizedBox(height: 20),
                 TextButton(
-                  onPressed: navigateToLogin, // Call the navigation function
+                  onPressed: navigateToLogin,
                   child: const Text(
                     "Already have an account? Sign In",
                     style: TextStyle(
@@ -162,7 +182,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // Reusing the interactive input field style
+  // --- HELPER FUNCTION: Input Field ---
   Widget _buildInputField(
       BuildContext context, {
         required TextEditingController controller,
@@ -171,6 +191,8 @@ class _SignupScreenState extends State<SignupScreen> {
         bool obscureText = false,
         TextInputType keyboardType = TextInputType.text,
       }) {
+    const Color primaryColor = Colors.lightBlueAccent; // Define color locally or globally
+
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
@@ -192,13 +214,13 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.lightBlueAccent, width: 2),
+          borderSide: const BorderSide(color: primaryColor, width: 2),
         ),
       ),
     );
   }
 
-  // Reusing the gradient button style for Signup
+  // --- HELPER FUNCTION: Signup Button ---
   Widget _buildSignupButton(BuildContext context, VoidCallback onPressed) {
     return Container(
       width: double.infinity,
@@ -206,7 +228,7 @@ class _SignupScreenState extends State<SignupScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(15),
         gradient: const LinearGradient(
-          colors: [Color(0xFF00C6FF), Color(0xFF0072FF)], // Blue gradient
+          colors: [Color(0xFF00C6FF), Color(0xFF0072FF)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),

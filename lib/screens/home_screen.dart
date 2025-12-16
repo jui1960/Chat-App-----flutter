@@ -1,120 +1,76 @@
-// lib/home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // NEW
+import 'package:firebase_auth/firebase_auth.dart';     // NEW
 import 'package:chat_app/menu_view.dart';
 import 'package:provider/provider.dart';
 import 'package:chat_app/theme_notifier.dart';
-import 'package:chat_app/screens/chat_screen.dart'; // Import the new ChatScreen
+import 'package:chat_app/screens/chat_screen.dart';
+import 'package:chat_app/screens/search_screen.dart';
+import 'login_screen.dart'; // Log out এর জন্য
 
-// --- Data Model (Updated with status) ---
-class Conversation {
-  final String name;
-  final String lastMessage;
-  final String time;
-  final String imageUrl;
-  final String status; // New field for user status
-
-  const Conversation({
-    required this.name,
-    required this.lastMessage,
-    required this.time,
-    required this.imageUrl,
-    this.status = 'Online',
-  });
-}
+// *** NOTE: Conversation Model is now OBSOLETE if we use Firestore data ***
+// We will now fetch data directly from Firestore's 'users' collection.
 
 // --- Chats View Widget (First Tab Content) ---
-class ChatsView extends StatelessWidget {
+// Changed to StatefulWidget to handle Firebase StreamBuilder
+class ChatsView extends StatefulWidget {
   const ChatsView({super.key});
 
-  // --- UPDATED: Sample Data Added for demonstration and Navigation ---
-  final List<Conversation> sampleConversations = const [
-    Conversation(name: 'Alif Emu', lastMessage: 'How your life is going?', time: '12:30 PM', imageUrl: "https://i.ibb.co/L9H8b4f/p2.jpg", status: 'Online'),
-    Conversation(name: 'Kowser Jaman', lastMessage: 'Wow, that’s awesome!', time: '12:00 PM', imageUrl: "https://i.ibb.co/3sX8sW6/p3.jpg", status: 'Offline'),
-    Conversation(name: 'Md Rliyad', lastMessage: 'Bye bye.', time: '11:55 AM', imageUrl: "https://i.ibb.co/F82083D/p4.jpg", status: 'Online'),
-  ];
+  @override
+  State<ChatsView> createState() => _ChatsViewState();
+}
 
+class _ChatsViewState extends State<ChatsView> {
+  // বর্তমানে লগইন থাকা ইউজারের UID
+  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+  // দুটি ইউজারের UID ব্যবহার করে একটি ইউনিক চ্যাট আইডি তৈরি করা
+  String _getChatId(String user1Id, String user2Id) {
+    if (user1Id.compareTo(user2Id) > 0) {
+      return '${user1Id}_$user2Id';
+    } else {
+      return '${user2Id}_$user1Id';
+    }
+  }
+
+  // চ্যাট শুরু করার ফাংশন
+  void _startChat(String peerId, String peerName, String peerImageUrl) {
+    if (currentUserId == null) return;
+
+    final chatId = _getChatId(currentUserId!, peerId);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatScreen(
+          chatId: chatId,
+          userName: peerName,
+          userStatus: 'Online',
+          userImageUrl: peerImageUrl,
+        ),
+      ),
+    );
+  }
+
+  // লগআউট ফাংশন
+  void _logout() async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
+  // --- BUILD METHOD: Renders the List of All Users from Firestore ---
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final headerTextColor = isDarkMode ? Colors.white : Colors.black;
-    final searchFillColor = isDarkMode ? const Color(0xFF283543) : Colors.white;
     final listBackgroundColor = isDarkMode ? Theme.of(context).colorScheme.surface : Colors.white;
-
-    Widget listContent;
-
-    if (sampleConversations.isEmpty) {
-      listContent = Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.message_outlined, size: 80, color: Colors.grey.shade400),
-            const SizedBox(height: 20),
-            Text(
-              "No active conversations.",
-              style: TextStyle(
-                  fontSize: 18,
-                  color: isDarkMode ? Colors.white70 : Colors.grey.shade600,
-                  fontWeight: FontWeight.w500),
-            ),
-            Text(
-              "Start a chat to see it here.",
-              style: TextStyle(
-                  fontSize: 14, color: isDarkMode ? Colors.grey : Colors.grey.shade500),
-            ),
-          ],
-        ),
-      );
-    } else {
-      listContent = ListView.separated(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: sampleConversations.length,
-        separatorBuilder: (context, index) => Divider(
-            height: 1,
-            indent: 80,
-            endIndent: 10,
-            color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFF1F1F1)),
-        itemBuilder: (context, index) {
-          final conversation = sampleConversations[index];
-          return ListTile(
-            contentPadding: const EdgeInsets.symmetric(vertical: 8),
-            leading: CircleAvatar(
-              radius: 28,
-              backgroundColor: Theme.of(context).colorScheme.secondary,
-              backgroundImage: NetworkImage(conversation.imageUrl),
-            ),
-            title: Text(conversation.name,
-                style: TextStyle(fontWeight: FontWeight.bold, color: headerTextColor)),
-            subtitle: Text(
-              conversation.lastMessage,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: isDarkMode ? Colors.grey.shade400 : Colors.grey),
-            ),
-            trailing: Text(conversation.time,
-                style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey.shade600 : Colors.grey)),
-            onTap: () {
-              // --- UPDATED: Navigate to ChatScreen with necessary data ---
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChatScreen(
-                    chatId: conversation.name, // Using name as a placeholder ID
-                    userName: conversation.name,
-                    userStatus: conversation.status,
-                    userImageUrl: conversation.imageUrl,
-                  ),
-                ),
-              );
-              // -----------------------------------------------------------
-            },
-          );
-        },
-      );
-    }
 
     return Column(
       children: [
+        // --- Header with Title and Icons ---
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
@@ -124,40 +80,31 @@ class ChatsView extends StatelessWidget {
                 "ChatApp",
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: headerTextColor),
               ),
-              IconButton(
-                icon: Icon(Icons.group_add, color: Theme.of(context).colorScheme.secondary),
-                onPressed: () {
-                  // TODO: Navigate to Group Creation Screen
-                },
-              ),
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.search, color: Theme.of(context).colorScheme.secondary),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SearchScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  // Added Logout Button beside Search Icon
+                  IconButton(
+                    icon: Icon(Icons.exit_to_app, color: Theme.of(context).colorScheme.secondary),
+                    onPressed: _logout,
+                  ),
+                ],
+              )
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: searchFillColor,
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: [
-                BoxShadow(
-                    color: isDarkMode ? Colors.black.withOpacity(0.4) : Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5))
-              ],
-            ),
-            child: TextField(
-              style: TextStyle(color: headerTextColor),
-              decoration: InputDecoration(
-                hintText: "Search a friend",
-                hintStyle: TextStyle(color: isDarkMode ? Colors.grey.shade600 : Colors.grey),
-                prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.secondary),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
-              ),
-            ),
-          ),
-        ),
+
+        // --- List Content (Firebase StreamBuilder) ---
         Expanded(
           child: Container(
             padding: const EdgeInsets.only(top: 10),
@@ -165,7 +112,69 @@ class ChatsView extends StatelessWidget {
               color: listBackgroundColor,
               borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
             ),
-            child: listContent,
+            child: StreamBuilder<QuerySnapshot>(
+              // Firestore থেকে 'users' কালেকশনের ডেটা রিয়েল-টাইমে লোড করা হচ্ছে
+              stream: FirebaseFirestore.instance.collection('users').snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error loading users: ${snapshot.error}'));
+                }
+
+                // বর্তমানে লগইন থাকা ইউজারকে লিস্ট থেকে বাদ দেওয়া
+                final allUsers = snapshot.data!.docs
+                    .where((doc) => doc.id != currentUserId)
+                    .toList();
+
+                if (allUsers.isEmpty) {
+                  return const Center(child: Text('You are the only user, start inviting friends!'));
+                }
+
+                // ইউজারদের লিস্ট প্রদর্শন
+                return ListView.separated(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: allUsers.length,
+                  separatorBuilder: (context, index) => Divider(
+                      height: 1,
+                      indent: 80,
+                      endIndent: 10,
+                      color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFF1F1F1)),
+                  itemBuilder: (context, index) {
+                    final userData = allUsers[index].data() as Map<String, dynamic>;
+                    final userId = allUsers[index].id;
+
+                    final username = userData['fullName'] ?? userData['username'] ?? 'Chat User';
+                    final userImageUrl = userData['imageUrl'] ?? 'https://via.placeholder.com/150';
+                    final userEmail = userData['email'] ?? 'Tap to chat';
+
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      leading: CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Theme.of(context).colorScheme.secondary,
+                        backgroundImage: NetworkImage(userImageUrl),
+                      ),
+                      title: Text(username,
+                          style: TextStyle(fontWeight: FontWeight.bold, color: headerTextColor)),
+                      subtitle: Text(
+                        userEmail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: isDarkMode ? Colors.grey.shade400 : Colors.grey),
+                      ),
+                      trailing: Text('New User', // Placeholder for time/status
+                          style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey.shade600 : Colors.grey)),
+
+                      // চ্যাট শুরু করার লজিক
+                      onTap: () => _startChat(userId, username, userImageUrl),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -173,16 +182,15 @@ class ChatsView extends StatelessWidget {
   }
 }
 
+// --- Rest of HomeScreen (unchanged structure) ---
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
-
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-
   final List<Widget> _widgetOptions = <Widget>[
     const ChatsView(),
     const MenuView(),
