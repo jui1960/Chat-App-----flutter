@@ -14,6 +14,10 @@ class MessageInput extends StatelessWidget {
     final inputFillColor = isDarkMode ? const Color(0xFF1E2733) : Colors.white;
     final controller = TextEditingController();
 
+    // --- FIX: Determine hint text color based on theme ---
+    final hintTextColor = isDarkMode ? Colors.white : Colors.black;
+    // -----------------------------------------------------
+
     void sendMessage() {
       if (controller.text.trim().isNotEmpty) {
         String message = controller.text;
@@ -55,9 +59,7 @@ class MessageInput extends StatelessWidget {
             onPressed: startVoiceRecording,
           ),
 
-          // *** REMOVED: Removed the SizedBox that was creating extra space ***
-
-          // 3. Text Input Field (Now takes maximum available space up to the voice icon)
+          // 3. Text Input Field (Now takes maximum possible space)
           Expanded(
             child: Container(
               // Reduced internal left padding of the text field
@@ -76,6 +78,10 @@ class MessageInput extends StatelessWidget {
                   hintText: 'Write a message...',
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
+
+                  // --- APPLY FIX: Set the hintStyle color ---
+                  hintStyle: TextStyle(color: hintTextColor.withOpacity(0.6)),
+                  // ------------------------------------------
 
                   // Attachment Icon (Inside)
                   suffixIcon: IconButton(

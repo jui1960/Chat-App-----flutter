@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'theme_notifier.dart';
+import 'theme_notifier.dart'; // Import the new Notifier
 import 'screens/login_screen.dart';
 import 'package:chat_app/screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  // 1. Load the saved theme preference before running the app
+  final savedThemeMode = await ThemeNotifier.loadThemeMode();
+
   runApp(
     ChangeNotifierProvider(
-      create: (_) => ThemeNotifier(ThemeMode.light),
+      // 2. Initialize ThemeNotifier with the loaded theme mode
+      create: (_) => ThemeNotifier(savedThemeMode),
       child: const ChatApp(),
     ),
   );
