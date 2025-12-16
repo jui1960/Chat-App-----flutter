@@ -1,28 +1,36 @@
+// lib/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:chat_app/menu_view.dart';
 import 'package:provider/provider.dart';
 import 'package:chat_app/theme_notifier.dart';
+import 'package:chat_app/screens/chat_screen.dart'; // Import the new ChatScreen
 
+// --- Data Model (Updated with status) ---
 class Conversation {
   final String name;
   final String lastMessage;
   final String time;
   final String imageUrl;
+  final String status; // New field for user status
 
   const Conversation({
     required this.name,
     required this.lastMessage,
     required this.time,
     required this.imageUrl,
+    this.status = 'Online',
   });
 }
 
+// --- Chats View Widget (First Tab Content) ---
 class ChatsView extends StatelessWidget {
   const ChatsView({super.key});
 
+  // --- UPDATED: Sample Data Added for demonstration and Navigation ---
   final List<Conversation> sampleConversations = const [
-    // Conversation(name: 'Alif Emu', lastMessage: 'How is your life going?', time: '12:30 PM', imageUrl: "https://via.placeholder.com/150/007bff/ffffff?text=AE"),
-    // You can uncomment sample data here if you want to see the list populate.
+    Conversation(name: 'Alif Emu', lastMessage: 'How your life is going?', time: '12:30 PM', imageUrl: "https://i.ibb.co/L9H8b4f/p2.jpg", status: 'Online'),
+    Conversation(name: 'Kowser Jaman', lastMessage: 'Wow, that’s awesome!', time: '12:00 PM', imageUrl: "https://i.ibb.co/3sX8sW6/p3.jpg", status: 'Offline'),
+    Conversation(name: 'Md Rliyad', lastMessage: 'Bye bye.', time: '11:55 AM', imageUrl: "https://i.ibb.co/F82083D/p4.jpg", status: 'Online'),
   ];
 
   @override
@@ -86,7 +94,19 @@ class ChatsView extends StatelessWidget {
             trailing: Text(conversation.time,
                 style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey.shade600 : Colors.grey)),
             onTap: () {
-              // TODO: Navigate to ChatScreen
+              // --- UPDATED: Navigate to ChatScreen with necessary data ---
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatScreen(
+                    chatId: conversation.name, // Using name as a placeholder ID
+                    userName: conversation.name,
+                    userStatus: conversation.status,
+                    userImageUrl: conversation.imageUrl,
+                  ),
+                ),
+              );
+              // -----------------------------------------------------------
             },
           );
         },
