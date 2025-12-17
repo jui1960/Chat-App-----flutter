@@ -21,7 +21,7 @@ class ChatsView extends StatefulWidget {
 
 class _ChatsViewState extends State<ChatsView> {
   final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-  final firestore = FirebaseFirestore.instance; // ✅ Firestore ইনস্ট্যান্স যোগ করা হলো
+  final firestore = FirebaseFirestore.instance;
 
   String _getChatId(String user1Id, String user2Id) {
     if (user1Id.compareTo(user2Id) > 0) {
@@ -41,7 +41,7 @@ class _ChatsViewState extends State<ChatsView> {
       MaterialPageRoute(
         builder: (context) => ChatScreen(
           chatId: chatId,
-          userName: peerName,
+          userName: peerName, // Original name is passed here
           userStatus: userStatus,
           userImageUrl: peerImageUrl,
         ),
@@ -108,12 +108,10 @@ class _ChatsViewState extends State<ChatsView> {
               color: listBackgroundColor,
               borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
             ),
-            // ✅ FIX 1: users কালেকশনের পরিবর্তে chats কালেকশন স্ট্রিম করা হলো
             child: StreamBuilder<QuerySnapshot>(
               stream: firestore
                   .collection('chats')
-                  .where('members', arrayContains: currentUserId) // শুধুমাত্র currentUserId যে চ্যাটগুলোর member
-              // .orderBy('lastMessageTimestamp', descending: true) // যদি 'lastMessageTimestamp' ফিল্ড থাকে
+                  .where('members', arrayContains: currentUserId)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -129,8 +127,6 @@ class _ChatsViewState extends State<ChatsView> {
                   return const Center(child: Text('Start a new chat from the Search screen!'));
                 }
 
-                // ✅ FIX 2: ListTiles তৈরি করার জন্য FutureBuilder ব্যবহার করা হলো
-                // কারণ প্রত্যেক chatDoc এর জন্য peerId এবং তার userData আনতে হবে
                 return ListView.separated(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -140,10 +136,14 @@ class _ChatsViewState extends State<ChatsView> {
                     final chatDoc = chatDocs[index].data() as Map<String, dynamic>?;
                     final chatId = chatDocs[index].id;
 
-                    // peerId বের করা
                     final members = chatDoc?['members'] as List<dynamic>?;
                     if (members == null || members.length != 2) return const SizedBox.shrink();
                     final peerId = members.firstWhere((id) => id != currentUserId);
+
+                    // Nickname লজিক: চ্যাট ডকুমেন্ট থেকে নিকনেম টেনে আনা
+                    final nicknameKey = 'nickname_$currentUserId';
+                    final savedNickname = chatDoc?[nicknameKey] as String?;
+
 
                     // --- FutureBuilder to fetch Peer User Data ---
                     return FutureBuilder<DocumentSnapshot>(
@@ -157,8 +157,13 @@ class _ChatsViewState extends State<ChatsView> {
                         }
 
                         final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                        final username = userData['fullName'] ?? userData['username'] ?? 'Chat User';
+                        final defaultUsername = userData['fullName'] ?? userData['username'] ?? 'Chat User';
                         final userImageUrl = userData['imageUrl'] ?? 'https://via.placeholder.com/150';
+
+                        // ✅ ফাইনাল ডিসপ্লে নাম সেট করা
+                        final displayUsername = (savedNickname != null && savedNickname.isNotEmpty)
+                            ? savedNickname
+                            : defaultUsername;
 
                         final isOnline = userData['isOnline'] == true;
                         final lastSeenTimestamp = userData['lastSeen'] as Timestamp?;
@@ -173,7 +178,7 @@ class _ChatsViewState extends State<ChatsView> {
                           userStatus = '';
                         }
 
-                        // --- NESTED STREAMBUILDER for Real-Time Last Message (আগের মতো) ---
+                        // --- NESTED STREAMBUILDER for Real-Time Last Message ---
                         return StreamBuilder<QuerySnapshot>(
                           stream: firestore
                               .collection('chats')
@@ -195,9 +200,6 @@ class _ChatsViewState extends State<ChatsView> {
                                 final date = ts.toDate();
                                 lastTime = DateFormat('h:mm a').format(date);
                               }
-                            } else {
-                              // যদি কোনো মেসেজ না থাকে (যেমন সার্চ স্ক্রিন থেকে চ্যাট শুরু করার জন্য তৈরি হওয়া ফাঁকা ডক)
-                              // আপনি চাইলে এটি দেখাতে পারেন ('Start chatting!') অথবা অদৃশ্য করতে পারেন (return const SizedBox.shrink())
                             }
 
                             // --- Final ListTile Widget ---
@@ -205,12 +207,12 @@ class _ChatsViewState extends State<ChatsView> {
                               contentPadding: const EdgeInsets.symmetric(vertical: 10),
                               leading: AvatarWithLetter(
                                 imageUrl: userImageUrl,
-                                userName: username,
+                                userName: defaultUsername,
                                 isOnline: isOnline,
                                 radius: 28,
                                 onlineIndicatorBackgroundColor: listBackgroundColor,
                               ),
-                              title: Text(username,
+                              title: Text(displayUsername, // ✅ এখানে নিকনেম দেখানো হলো
                                   style: TextStyle(fontWeight: FontWeight.bold, color: headerTextColor)),
                               subtitle: Text(
                                 lastMessage,
@@ -235,7 +237,7 @@ class _ChatsViewState extends State<ChatsView> {
                                     ),
                                 ],
                               ),
-                              onTap: () => _startChat(peerId, username, userImageUrl, userStatus),
+                              onTap: () => _startChat(peerId, defaultUsername, userImageUrl, userStatus),
                             );
                           },
                         );

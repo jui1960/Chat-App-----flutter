@@ -5,11 +5,13 @@ import '../widgets/message_bubble.dart';
 import '../widgets/message_input.dart';
 import 'user_profile_screen.dart';
 import '../widgets/avatar_with_letter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 
 class ChatScreen extends StatelessWidget {
   final String chatId;
-  final String userName;
+  final String userName; // Original name (will be used if no nickname is set)
   final String userStatus;
   final String userImageUrl;
 
@@ -66,7 +68,7 @@ class ChatScreen extends StatelessWidget {
             userName: userName,
             userStatus: displayStatus,
             userImageUrl: userImageUrl,
-            chatId: chatId, // ✅ chatId পাস করা হলো
+            chatId: chatId,
           ),
         ),
       );
@@ -89,25 +91,44 @@ class ChatScreen extends StatelessWidget {
               isOnline: isOnline,
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  userName,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                  ),
-                ),
-                Text(
-                  displayStatus,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isOnline ? Colors.green : Colors.grey,
-                  ),
-                ),
-              ],
+            // ✅ StreamBuilder to dynamically show Nickname or Original Name
+            StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance.collection('chats').doc(chatId).snapshots(),
+              builder: (context, chatSnapshot) {
+                String displayedName = userName;
+                String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+                if (chatSnapshot.hasData && currentUserId != null) {
+                  final chatData = chatSnapshot.data!.data() as Map<String, dynamic>?;
+                  final nicknameKey = 'nickname_$currentUserId';
+                  final nickname = chatData?[nicknameKey] as String?;
+
+                  if (nickname != null && nickname.isNotEmpty) {
+                    displayedName = nickname;
+                  }
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayedName, // ✅ নিকনেম দেখানো হলো (You ছাড়া)
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                    Text(
+                      displayStatus,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isOnline ? Colors.green : Colors.grey,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),

@@ -1,51 +1,140 @@
-// lib/screens/user_profile_screen.dart (FINAL UPDATED CODE)
+// lib/screens/user_profile_screen.dart (FINAL UPDATED CODE with const fixes)
 
 import 'package:flutter/material.dart';
 import '../widgets/avatar_with_letter.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ Firebase ইমপোর্ট করা হলো
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UserProfileScreen extends StatelessWidget {
+// ... (Constructor and _setNickname, _showSetNicknameDialog, _deleteConversation, _handleMenuSelection methods are unchanged and correct)
+
   final String userName;
   final String userStatus;
   final String userImageUrl;
-  final String chatId; // ✅ chatId প্যারামিটার যোগ করা হলো
+  final String chatId;
 
   const UserProfileScreen({
     super.key,
     required this.userName,
     required this.userStatus,
     required this.userImageUrl,
-    required this.chatId, // ✅ chatId রিকোয়্যার্ড করা হলো
+    required this.chatId,
   });
 
-  // ✅ নতুন ডিলিট ফাংশন: Firebase থেকে চ্যাট ডিলিট করবে
+  // ✅ নিকনেম সেভ করা/মুছে ফেলা (unchanged)
+  Future<void> _setNickname(BuildContext context, String? newNickname) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: User not logged in.')),
+      );
+      return;
+    }
+
+    final firestore = FirebaseFirestore.instance;
+    final chatRef = firestore.collection('chats').doc(chatId);
+    final nicknameKey = 'nickname_$currentUserId';
+
+    try {
+      if (newNickname == null || newNickname.isEmpty) {
+        // Nickname মুছে ফেলা (Clear Nickname)
+        await chatRef.update({
+          nicknameKey: FieldValue.delete(),
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Nickname cleared for $userName')),
+        );
+      } else {
+        // Nickname সেট করা
+        await chatRef.set({
+          nicknameKey: newNickname,
+        }, SetOptions(merge: true));
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Nickname set to "$newNickname" for $userName')),
+        );
+      }
+      if(Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // ডায়ালগ বন্ধ করা
+      }
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update nickname: ${e.toString()}')),
+      );
+    }
+  }
+
+  // ✅ নিকনেম ডায়ালগ দেখানো (টাইপিং ফিক্সড, unchanged)
+  void _showSetNicknameDialog(BuildContext context) {
+    final controller = TextEditingController();
+    final primaryColor = Theme.of(context).colorScheme.secondary;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        // ডায়ালগের কনটেন্ট কালার কঠোরভাবে সাদা রাখা হলো
+        backgroundColor: Colors.white,
+        title: Text('Set Nickname for $userName',
+            style: const TextStyle(color: Colors.black)),
+        content: TextField(
+          controller: controller,
+          // ✅ FIX: ইনপুট টেক্সট কালার কঠোরভাবে কালো সেট করা হলো
+          style: const TextStyle(color: Colors.black),
+          decoration: InputDecoration(
+            hintText: "Enter Nickname",
+            hintStyle: const TextStyle(color: Colors.grey),
+            // ফোকাস থাকার সময় আন্ডারলাইন কালার নিশ্চিত করা হলো
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: primaryColor, width: 2),
+            ),
+            // সাধারণ আন্ডারলাইন কালার
+            enabledBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.grey),
+            ),
+          ),
+          autofocus: true,
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Cancel', style: TextStyle(color: Colors.black)),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+            },
+          ),
+          TextButton(
+            child: Text('Set', style: TextStyle(color: primaryColor)),
+            onPressed: () {
+              _setNickname(context, controller.text.trim());
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ডিলিট ফাংশন (unchanged)
   Future<void> _deleteConversation(BuildContext context) async {
     final firestore = FirebaseFirestore.instance;
     final chatRef = firestore.collection('chats').doc(chatId);
 
     try {
-      // 1. সাব-কালেকশন (messages) ডিলিট করা
-      // (প্রোডাকশন অ্যাপে ক্লাউড ফাংশন বা batch delete ব্যবহার করা উচিত। এখানে সহজ লুপ দেখানো হলো)
       final messagesSnapshot = await chatRef.collection('messages').get();
       for (final doc in messagesSnapshot.docs) {
         await doc.reference.delete();
       }
 
-      // 2. মেইন চ্যাট ডক ডিলিট করা
       await chatRef.delete();
 
-      // ডিলিট সফল হলে UserProfileScreen এবং ChatScreen থেকে ব্যাক করা
-      // এটি ডিলিট হওয়ার পর হোম স্ক্রিনে নিয়ে যাবে, যেখানে লিস্ট আপডেট হয়ে যাবে।
       Navigator.of(context)
-        ..pop() // UserProfileScreen
-        ..pop(); // ChatScreen
+        ..pop()
+        ..pop();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Conversation with $userName deleted successfully!')),
       );
 
     } catch (e) {
-      // ডিলিট ব্যর্থ হলে
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to delete chat: ${e.toString()}')),
       );
@@ -56,7 +145,6 @@ class UserProfileScreen extends StatelessWidget {
   void _handleMenuSelection(BuildContext context, String result) {
     switch (result) {
       case 'delete':
-      // ✅ ডিলিট করার আগে কনফার্মেশন ডায়ালগ দেখানো
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -72,20 +160,15 @@ class UserProfileScreen extends StatelessWidget {
               TextButton(
                 child: const Text('Delete', style: TextStyle(color: Colors.red)),
                 onPressed: () {
-                  Navigator.of(ctx).pop(); // ডায়ালগ বন্ধ
-                  _deleteConversation(context); // ডিলিট ফাংশন কল করা
+                  Navigator.of(ctx).pop();
+                  _deleteConversation(context);
                 },
               ),
             ],
           ),
         );
         break;
-      case 'block':
-        debugPrint('Blocking user $userName');
-        break;
-      case 'report':
-        debugPrint('Reporting user $userName');
-        break;
+    //...
     }
   }
 
@@ -96,7 +179,6 @@ class UserProfileScreen extends StatelessWidget {
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
     final dividerColor = isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-
     final isOnline = userStatus == 'Online';
 
 
@@ -122,14 +204,34 @@ class UserProfileScreen extends StatelessWidget {
                         onlineIndicatorBackgroundColor: backgroundColor,
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        userName,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
-                        ),
+                      // ✅ StreamBuilder: নিকনেম/আসল নাম ডিসপ্লে (You ছাড়া)
+                      StreamBuilder<DocumentSnapshot>(
+                        stream: FirebaseFirestore.instance.collection('chats').doc(chatId).snapshots(),
+                        builder: (context, chatSnapshot) {
+                          String displayedName = userName;
+                          String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+                          if (chatSnapshot.hasData && currentUserId != null) {
+                            final chatData = chatSnapshot.data!.data() as Map<String, dynamic>?;
+                            final nicknameKey = 'nickname_$currentUserId';
+                            final nickname = chatData?[nicknameKey] as String?;
+
+                            if (nickname != null && nickname.isNotEmpty) {
+                              displayedName = nickname;
+                            }
+                          }
+
+                          return Text(
+                            displayedName,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).textTheme.bodyLarge?.color,
+                            ),
+                          );
+                        },
                       ),
+
                       Text(
                         userStatus,
                         style: TextStyle(
@@ -157,9 +259,16 @@ class UserProfileScreen extends StatelessWidget {
 
                 // 2. Customization Block
                 _buildSectionHeader('Customization', isDarkMode),
+                // Nickname সেট করার অপশন
                 _buildSettingsItem(
                     context, Icons.person_outline, 'Set Nickname', primaryColor,
-                        () {}),
+                        () => _showSetNicknameDialog(context)),
+
+                // ✅ অপশন: Clear Nickname
+                _buildSettingsItem(
+                    context, Icons.clear_all, 'Clear Nickname', primaryColor,
+                        () => _setNickname(context, null)),
+
                 _buildSettingsItem(context, Icons.group_add_outlined,
                     'Create Group Chat with $userName', primaryColor, () {}),
                 _buildSettingsItem(
@@ -186,7 +295,7 @@ class UserProfileScreen extends StatelessWidget {
                 _buildSettingsItem(
                     context, Icons.flag_outlined, 'Report', primaryColor, () {}),
                 _buildSettingsItem(
-                    context, Icons.delete_outline, 'Delete Chat', primaryColor, () => _handleMenuSelection(context, 'delete')), // ✅ Delete বাটনে ক্লিক করলে ডিলিট লজিক কল হবে
+                    context, Icons.delete_outline, 'Delete Chat', primaryColor, () => _handleMenuSelection(context, 'delete')),
 
                 // Safe Area Padding
                 SizedBox(height: bottomPadding + 10),
@@ -198,7 +307,7 @@ class UserProfileScreen extends StatelessWidget {
     );
   }
 
-  // --- Helper Widgets (Unchanged) ---
+  // --- Helper Widgets (Const keyword removed) ---
   SliverAppBar _buildCustomAppBar(
       BuildContext context, Color primaryColor, bool isDarkMode, void Function(BuildContext, String) onSelect, Color backgroundColor) {
     return SliverAppBar(
@@ -243,7 +352,6 @@ class UserProfileScreen extends StatelessWidget {
     );
   }
 
-  // (বাকি helper functions unchanged)
   Widget _buildSectionHeader(String title, bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
@@ -260,6 +368,7 @@ class UserProfileScreen extends StatelessWidget {
 
   Widget _buildSettingsItem(BuildContext context, IconData icon, String title,
       Color primaryColor, VoidCallback onTap) {
+    // এখানে const ব্যবহার করা যেত না কারণ Theme.of(context) const নয়
     return ListTile(
       leading: Icon(icon, color: primaryColor),
       title: Text(
@@ -273,6 +382,7 @@ class UserProfileScreen extends StatelessWidget {
 
   Widget _buildActionIcon(
       IconData icon, String label, Color primaryColor, VoidCallback onTap) {
+    // এখানে const ব্যবহার করা যেত না কারণ primaryColor একটি final রানটাইম ভেরিয়েবল
     return Column(
       children: [
         Container(
