@@ -1,7 +1,5 @@
-// lib/screens/user_profile_screen.dart
 
 import 'package:flutter/material.dart';
-// ✅ AvatarWithLetter উইজেটটি ইমপোর্ট করা হয়েছে
 import '../widgets/avatar_with_letter.dart';
 
 class UserProfileScreen extends StatelessWidget {

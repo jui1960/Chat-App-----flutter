@@ -51,8 +51,7 @@ class MessageBubble extends StatelessWidget {
             bool shouldShowTime = false;
             final nextIndex = index + 1;
 
-            // Logic: Show time if this is the last message in the entire list (index 0 in reversed list)
-            // OR if the next message (which is chronologically older) was sent by a different user.
+
             if (index == 0) {
               shouldShowTime = true; // Always show time for the newest message
             } else if (nextIndex < loadedMessages.length) {
@@ -87,7 +86,7 @@ class MessageBubble extends StatelessWidget {
   }
 }
 
-// এটি হলো মেসেজ বাবল রেন্ডার করার উইজেট
+
 class _MessageBubbleContent extends StatelessWidget {
   const _MessageBubbleContent({
     super.key,
@@ -162,7 +161,7 @@ class _MessageBubbleContent extends StatelessWidget {
             padding: EdgeInsets.only(
               left: isMe ? 0 : 16,
               right: isMe ? 16 : 0,
-              bottom: 12, // Add extra space after the time
+              bottom: 12,
               top: 4,
             ),
             child: Text(

@@ -14,7 +14,7 @@ class ChatScreen extends StatelessWidget {
   final String userImageUrl;
 
 
-  // FIX: const keyword রিমুভ করা হলো
+
   ChatScreen({
     super.key,
     required this.chatId,
@@ -58,26 +58,29 @@ class ChatScreen extends StatelessWidget {
   }
 
   PreferredSizeWidget _buildChatAppBar(BuildContext context, Color primaryColor, bool isDarkMode, String displayStatus, bool isOnline) {
+    // --- কমন নেভিগেশন ফাংশন ---
+    void navigateToUserProfile() {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => UserProfileScreen(
+            userName: userName,
+            userStatus: displayStatus,
+            userImageUrl: userImageUrl,
+          ),
+        ),
+      );
+    }
+    // ----------------------------
+
     return AppBar(
       backgroundColor: isDarkMode ? Theme.of(context).appBarTheme.backgroundColor : Colors.white,
       elevation: 0,
       titleSpacing: 0,
 
       title: InkWell(
-        onTap: () {
-          // --- NAVIGATION TO USER PROFILE SCREEN ---
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => UserProfileScreen(
-                userName: userName,
-                userStatus: displayStatus,
-                userImageUrl: userImageUrl,
-              ),
-            ),
-          );
-          // ----------------------------------------
-        },
+        // ✅ নাম/প্রোফাইল পিকচারে ক্লিক করলে প্রোফাইল স্ক্রিনে যাবে (আগে থেকেই ছিল)
+        onTap: navigateToUserProfile,
         child: Row(
           children: [
             AvatarWithLetter(
@@ -121,7 +124,8 @@ class ChatScreen extends StatelessWidget {
         ),
         IconButton(
           icon: Icon(Icons.more_vert, color: Theme.of(context).textTheme.bodyLarge?.color),
-          onPressed: () {},
+          // 🛑 FIX: ৩-ডট আইকনে ক্লিক করলে প্রোফাইল স্ক্রিনে নেভিগেট হবে
+          onPressed: navigateToUserProfile,
         ),
       ],
     );
