@@ -26,26 +26,38 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
+    // Password length validation
+    if (passCtrl.text.trim().length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Password must be at least 6 characters long.")),
+      );
+      return;
+    }
+
+
     setState(() => loading = true);
+
+    UserCredential? userCredential;
+
     try {
-      // 1. Create user with email and password
-      UserCredential userCredential =
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      // 1. Create user with email and password (Firebase Auth)
+      userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailCtrl.text.trim(),
         password: passCtrl.text.trim(),
       );
 
-      // 2. Update display name
       final user = userCredential.user;
-      final username = nameCtrl.text.trim();
+      final fullName = nameCtrl.text.trim();
+      final lowerCaseUsername = fullName.toLowerCase(); // সব lowercase এ পরিবর্তন করা
 
-      await user?.updateDisplayName(username);
+      // 2. Update display name in Firebase Auth
+      await user?.updateDisplayName(fullName);
 
       // 3. Save user data to Firestore 'users' collection
       if (user != null) {
         final userData = {
-          'username': username.toLowerCase(), // Lowercase for searching
-          'fullName': username,
+          'username': lowerCaseUsername, // Lowercase field for search
+          'fullName': fullName,         // Original casing for display
           'email': user.email,
           'imageUrl': 'https://via.placeholder.com/150', // Default image
           'userId': user.uid,
@@ -58,20 +70,36 @@ class _SignupScreenState extends State<SignupScreen> {
             .doc(user.uid)
             .set(userData);
       }
-      // -------------------------------------------------------------------
 
       // 4. Navigate to HomeScreen on successful registration
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
+
     } catch (e) {
+      // If registration fails, show detailed error
+      String errorMessage = "Registration failed. Please check your details.";
+      if (e is FirebaseAuthException) {
+        // Specific error handling for better user feedback
+        errorMessage = e.message ?? "Authentication failed.";
+      } else {
+        errorMessage = e.toString();
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Registration failed: ${e.toString()}"),
+          content: Text(errorMessage),
           backgroundColor: Colors.red,
         ),
       );
+
+      // IMPORTANT: If Firestore save failed BUT Auth succeeded, log out the user
+      // This prevents a 'ghost' user stuck between Auth and Firestore.
+      if (userCredential != null) {
+        await FirebaseAuth.instance.signOut();
+      }
+
     }
     setState(() => loading = false);
   }
@@ -153,7 +181,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 _buildInputField(
                   context,
                   controller: passCtrl,
-                  hintText: 'Password',
+                  hintText: 'Password (min 6 chars)',
                   icon: Icons.lock_outline,
                   obscureText: true,
                 ),
@@ -191,7 +219,7 @@ class _SignupScreenState extends State<SignupScreen> {
         bool obscureText = false,
         TextInputType keyboardType = TextInputType.text,
       }) {
-    const Color primaryColor = Colors.lightBlueAccent; // Define color locally or globally
+    const Color primaryColor = Colors.lightBlueAccent;
 
     return TextField(
       controller: controller,

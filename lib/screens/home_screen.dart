@@ -1,18 +1,15 @@
+// lib/screens/home_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // NEW
-import 'package:firebase_auth/firebase_auth.dart';     // NEW
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chat_app/menu_view.dart';
-import 'package:provider/provider.dart';
-import 'package:chat_app/theme_notifier.dart';
 import 'package:chat_app/screens/chat_screen.dart';
 import 'package:chat_app/screens/search_screen.dart';
-import 'login_screen.dart'; // Log out এর জন্য
+import 'login_screen.dart';
+import 'package:intl/intl.dart';
+import '../widgets/avatar_with_letter.dart';
 
-// *** NOTE: Conversation Model is now OBSOLETE if we use Firestore data ***
-// We will now fetch data directly from Firestore's 'users' collection.
-
-// --- Chats View Widget (First Tab Content) ---
-// Changed to StatefulWidget to handle Firebase StreamBuilder
 class ChatsView extends StatefulWidget {
   const ChatsView({super.key});
 
@@ -21,10 +18,8 @@ class ChatsView extends StatefulWidget {
 }
 
 class _ChatsViewState extends State<ChatsView> {
-  // বর্তমানে লগইন থাকা ইউজারের UID
   final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-  // দুটি ইউজারের UID ব্যবহার করে একটি ইউনিক চ্যাট আইডি তৈরি করা
   String _getChatId(String user1Id, String user2Id) {
     if (user1Id.compareTo(user2Id) > 0) {
       return '${user1Id}_$user2Id';
@@ -33,8 +28,7 @@ class _ChatsViewState extends State<ChatsView> {
     }
   }
 
-  // চ্যাট শুরু করার ফাংশন
-  void _startChat(String peerId, String peerName, String peerImageUrl) {
+  void _startChat(String peerId, String peerName, String peerImageUrl, String userStatus) {
     if (currentUserId == null) return;
 
     final chatId = _getChatId(currentUserId!, peerId);
@@ -45,14 +39,13 @@ class _ChatsViewState extends State<ChatsView> {
         builder: (context) => ChatScreen(
           chatId: chatId,
           userName: peerName,
-          userStatus: 'Online',
+          userStatus: userStatus,
           userImageUrl: peerImageUrl,
         ),
       ),
     );
   }
 
-  // লগআউট ফাংশন
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     Navigator.pushReplacement(
@@ -61,16 +54,18 @@ class _ChatsViewState extends State<ChatsView> {
     );
   }
 
-  // --- BUILD METHOD: Renders the List of All Users from Firestore ---
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final headerTextColor = isDarkMode ? Colors.white : Colors.black;
     final listBackgroundColor = isDarkMode ? Theme.of(context).colorScheme.surface : Colors.white;
 
+    if (currentUserId == null) {
+      return const Center(child: Text("Please login again."));
+    }
+
     return Column(
       children: [
-        // --- Header with Title and Icons ---
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
@@ -93,7 +88,6 @@ class _ChatsViewState extends State<ChatsView> {
                       );
                     },
                   ),
-                  // Added Logout Button beside Search Icon
                   IconButton(
                     icon: Icon(Icons.exit_to_app, color: Theme.of(context).colorScheme.secondary),
                     onPressed: _logout,
@@ -104,7 +98,6 @@ class _ChatsViewState extends State<ChatsView> {
           ),
         ),
 
-        // --- List Content (Firebase StreamBuilder) ---
         Expanded(
           child: Container(
             padding: const EdgeInsets.only(top: 10),
@@ -113,7 +106,6 @@ class _ChatsViewState extends State<ChatsView> {
               borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
             ),
             child: StreamBuilder<QuerySnapshot>(
-              // Firestore থেকে 'users' কালেকশনের ডেটা রিয়েল-টাইমে লোড করা হচ্ছে
               stream: FirebaseFirestore.instance.collection('users').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -123,7 +115,6 @@ class _ChatsViewState extends State<ChatsView> {
                   return Center(child: Text('Error loading users: ${snapshot.error}'));
                 }
 
-                // বর্তমানে লগইন থাকা ইউজারকে লিস্ট থেকে বাদ দেওয়া
                 final allUsers = snapshot.data!.docs
                     .where((doc) => doc.id != currentUserId)
                     .toList();
@@ -132,7 +123,6 @@ class _ChatsViewState extends State<ChatsView> {
                   return const Center(child: Text('You are the only user, start inviting friends!'));
                 }
 
-                // ইউজারদের লিস্ট প্রদর্শন
                 return ListView.separated(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -144,32 +134,84 @@ class _ChatsViewState extends State<ChatsView> {
                       color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFF1F1F1)),
                   itemBuilder: (context, index) {
                     final userData = allUsers[index].data() as Map<String, dynamic>;
-                    final userId = allUsers[index].id;
+                    final peerId = allUsers[index].id;
 
                     final username = userData['fullName'] ?? userData['username'] ?? 'Chat User';
                     final userImageUrl = userData['imageUrl'] ?? 'https://via.placeholder.com/150';
-                    final userEmail = userData['email'] ?? 'Tap to chat';
 
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                      leading: CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Theme.of(context).colorScheme.secondary,
-                        backgroundImage: NetworkImage(userImageUrl),
-                      ),
-                      title: Text(username,
-                          style: TextStyle(fontWeight: FontWeight.bold, color: headerTextColor)),
-                      subtitle: Text(
-                        userEmail,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: isDarkMode ? Colors.grey.shade400 : Colors.grey),
-                      ),
-                      trailing: Text('New User', // Placeholder for time/status
-                          style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey.shade600 : Colors.grey)),
+                    final isOnline = userData['isOnline'] == true;
+                    final lastSeenTimestamp = userData['lastSeen'] as Timestamp?;
 
-                      // চ্যাট শুরু করার লজিক
-                      onTap: () => _startChat(userId, username, userImageUrl),
+                    String userStatus;
+                    if (isOnline) {
+                      userStatus = 'Online';
+                    } else if (lastSeenTimestamp != null) {
+                      final time = lastSeenTimestamp.toDate();
+                      userStatus = 'Last seen ${DateFormat('h:mm a').format(time)}';
+                    } else {
+                      userStatus = 'Offline';
+                    }
+
+                    final chatId = _getChatId(currentUserId!, peerId);
+
+                    // --- NESTED STREAMBUILDER for Real-Time Last Message ---
+                    return StreamBuilder<QuerySnapshot>(
+                      // Real-time stream to listen for changes in the 'messages' subcollection
+                      stream: FirebaseFirestore.instance
+                          .collection('chats')
+                          .doc(chatId)
+                          .collection('messages')
+                          .orderBy('timestamp', descending: true)
+                          .limit(1)
+                          .snapshots(),
+                      builder: (context, messageSnapshot) {
+                        String lastMessage = 'Start chatting!';
+                        String lastTime = '';
+
+                        if (messageSnapshot.hasData && messageSnapshot.data!.docs.isNotEmpty) {
+                          // মেসেজ লোড হলে
+                          final messageData = messageSnapshot.data!.docs.first.data() as Map<String, dynamic>;
+                          lastMessage = messageData['text'] ?? 'Image/File';
+
+                          if (messageData['timestamp'] is Timestamp) {
+                            final ts = messageData['timestamp'] as Timestamp;
+                            final date = ts.toDate();
+                            lastTime = DateFormat('h:mm a').format(date);
+                          }
+                        }
+
+                        // --- Final ListTile Widget ---
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                          leading: AvatarWithLetter(
+                            imageUrl: userImageUrl,
+                            userName: username,
+                            isOnline: isOnline,
+                            radius: 28,
+                            onlineIndicatorBackgroundColor: listBackgroundColor,
+                          ),
+                          title: Text(username,
+                              style: TextStyle(fontWeight: FontWeight.bold, color: headerTextColor)),
+                          subtitle: Text(
+                            lastMessage,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: isDarkMode ? Colors.grey.shade400 : Colors.grey),
+                          ),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(lastTime,
+                                  style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey.shade600 : Colors.grey)),
+                              const SizedBox(height: 4),
+                              Text(userStatus,
+                                  style: TextStyle(fontSize: 12, color: isOnline ? Colors.green : Colors.grey)),
+                            ],
+                          ),
+                          onTap: () => _startChat(peerId, username, userImageUrl, userStatus),
+                        );
+                      },
                     );
                   },
                 );
@@ -182,7 +224,6 @@ class _ChatsViewState extends State<ChatsView> {
   }
 }
 
-// --- Rest of HomeScreen (unchanged structure) ---
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 

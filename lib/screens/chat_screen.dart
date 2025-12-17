@@ -1,7 +1,7 @@
 // lib/chat_screen.dart
 import 'package:flutter/material.dart';
-import '../widget/message_bubble.dart';
-import '../widget/message_input.dart';
+import '../widgets/message_bubble.dart';
+import '../widgets/message_input.dart';
 import 'user_profile_screen.dart'; // <--- 1. Import the new screen (Ensure the path is correct)
 
 
