@@ -42,13 +42,14 @@ class _ChatsViewState extends State<ChatsView> {
           chatId: chatId,
           userName: peerName,
           userStatus: userStatus,
-          // 🛑 FIX: userImageUrl এর পরিবর্তে peerImageUrl ব্যবহার করা হয়েছে 
           userImageUrl: peerImageUrl,
         ),
       ),
     );
   }
 
+  // _logout ফাংশনটি যেহেতু মেনু স্ক্রিনে আছে এবং এখানে দরকার নেই, তাই এটি অপ্রয়োজনীয়।
+  /*
   void _logout() async {
     await FirebaseAuth.instance.signOut();
 
@@ -57,6 +58,16 @@ class _ChatsViewState extends State<ChatsView> {
       MaterialPageRoute(builder: (_) => const LoginScreen()),
     );
   }
+  */
+
+  // ✅ New function for Group Creation
+  void _navigateToCreateGroup() {
+    // TODO: Implement navigation to the screen where users can select members and create a group.
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Navigate to Group Creation Screen'))
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -92,9 +103,10 @@ class _ChatsViewState extends State<ChatsView> {
                       );
                     },
                   ),
+                  // 🛑 UPDATED: Logout Icon (Icons.exit_to_app) এর পরিবর্তে Group Create Icon
                   IconButton(
-                    icon: Icon(Icons.exit_to_app, color: Theme.of(context).colorScheme.secondary),
-                    onPressed: _logout,
+                    icon: Icon(Icons.group_add_outlined, color: Theme.of(context).colorScheme.secondary),
+                    onPressed: _navigateToCreateGroup, // নতুন ফাংশন কল করা হলো
                   ),
                 ],
               )
@@ -137,7 +149,6 @@ class _ChatsViewState extends State<ChatsView> {
                     final peerId = allUsers[index].id;
 
                     final username = userData['fullName'] ?? userData['username'] ?? 'Chat User';
-                    // Null Check এখানে সঠিক আছে
                     final userImageUrl = userData['imageUrl'] ?? 'https://via.placeholder.com/150';
 
                     final isOnline = userData['isOnline'] == true;
@@ -214,7 +225,6 @@ class _ChatsViewState extends State<ChatsView> {
                                 ),
                             ],
                           ),
-                          // ✅ userImageUrl-কে _startChat এ পাস করা হচ্ছে
                           onTap: () => _startChat(peerId, username, userImageUrl, userStatus),
                         );
                       },
@@ -240,7 +250,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final List<Widget> _widgetOptions = <Widget>[
     const ChatsView(),
-    // 🛑 warning: Unused import: 'screens/user_status_tracker.dart' (এটি দূর করতে চাইলে main.dart এ পরিবর্তন করুন)
     const MenuView(),
   ];
 
@@ -255,7 +264,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDarkMode ? Theme.of(context).scaffoldBackgroundColor : const Color(0xFFF0F5F8);
 
-    // UserStatusTracker কে উইজেট হিসেবে কল করা হয়েছে (যদি error না আসে)
     return UserStatusTracker(
       child: Scaffold(
         backgroundColor: backgroundColor,
