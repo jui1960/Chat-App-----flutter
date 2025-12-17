@@ -1,5 +1,8 @@
-// lib/user_profile_screen.dart
+// lib/screens/user_profile_screen.dart
+
 import 'package:flutter/material.dart';
+// ✅ AvatarWithLetter উইজেটটি ইমপোর্ট করা হয়েছে
+import '../widgets/avatar_with_letter.dart';
 
 class UserProfileScreen extends StatelessWidget {
   final String userName;
@@ -16,7 +19,6 @@ class UserProfileScreen extends StatelessWidget {
   void _handleMenuSelection(BuildContext context, String result) {
     switch (result) {
       case 'delete':
-      // Pop UserProfileScreen, then pop ChatScreen to go back to the chat list
         Navigator.of(context)
           ..pop()
           ..pop();
@@ -38,21 +40,18 @@ class UserProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.secondary;
-
-    // FIX 1: Get the correct background color from the theme
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
-
-    // FIX 2: Set divider color based on the theme
     final dividerColor = isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300;
-
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
+    // স্ট্যাটাস থেকে Online চেক করা হচ্ছে
+    final isOnline = userStatus == 'Online';
+
+
     return Scaffold(
-      // FIX 3: Ensure Scaffold uses the theme's background color
       backgroundColor: backgroundColor,
       body: CustomScrollView(
         slivers: [
-          // FIX 4: Pass the correct theme colors to the AppBar builder
           _buildCustomAppBar(context, primaryColor, isDarkMode, _handleMenuSelection, backgroundColor),
 
           SliverList(
@@ -63,10 +62,16 @@ class UserProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 16.0, bottom: 20.0),
                   child: Column(
                     children: [
-                      CircleAvatar(
+                      // 🛑 FIX: CircleAvatar-কে AvatarWithLetter দিয়ে রিপ্লেস করা হলো
+                      AvatarWithLetter(
+                        imageUrl: userImageUrl,
+                        userName: userName,
                         radius: 40,
-                        backgroundImage: NetworkImage(userImageUrl),
+                        isOnline: isOnline,
+                        // প্রোফাইল স্ক্রিনের ব্যাকগ্রাউন্ড কালার ইন্ডিকেটরের জন্য পাস করা হলো
+                        onlineIndicatorBackgroundColor: backgroundColor,
                       ),
+                      // --------------------------------------------------------
                       const SizedBox(height: 8),
                       Text(
                         userName,
@@ -80,7 +85,7 @@ class UserProfileScreen extends StatelessWidget {
                         userStatus,
                         style: TextStyle(
                           fontSize: 14,
-                          color: userStatus == 'Online' ? Colors.green : Colors.grey,
+                          color: isOnline ? Colors.green : Colors.grey,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -99,7 +104,6 @@ class UserProfileScreen extends StatelessWidget {
                   ),
                 ),
 
-                // FIX: Use the theme-specific divider color
                 Divider(color: dividerColor),
 
                 // 2. Customization Block
@@ -145,13 +149,10 @@ class UserProfileScreen extends StatelessWidget {
     );
   }
 
-  // --- Helper Widgets ---
-
-  // NOTE: Function signature updated to include 'backgroundColor'
+  // --- Helper Widgets (Unchanged) ---
   SliverAppBar _buildCustomAppBar(
       BuildContext context, Color primaryColor, bool isDarkMode, void Function(BuildContext, String) onSelect, Color backgroundColor) {
     return SliverAppBar(
-      // FIX 5: Use the calculated background color for the AppBar
       backgroundColor: backgroundColor,
       pinned: true,
       elevation: 1,
@@ -170,10 +171,8 @@ class UserProfileScreen extends StatelessWidget {
         ),
       ),
       actions: [
-        // 3-dot Menu (Dropdown)
         PopupMenuButton<String>(
           icon: Icon(Icons.more_vert, color: Theme.of(context).textTheme.bodyLarge?.color),
-          // FIX 6: Explicitly set background color for the popup menu (optional, but good practice)
           color: isDarkMode ? Theme.of(context).colorScheme.surface : Colors.white,
           onSelected: (String result) => onSelect(context, result),
           itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -195,7 +194,6 @@ class UserProfileScreen extends StatelessWidget {
     );
   }
 
-  // (Other helper widgets remain the same, using the context theme data)
   Widget _buildSectionHeader(String title, bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),

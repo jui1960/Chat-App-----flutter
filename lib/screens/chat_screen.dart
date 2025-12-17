@@ -1,8 +1,10 @@
-// lib/chat_screen.dart
+// lib/screens/chat_screen.dart (FINAL UPDATED CODE)
+
 import 'package:flutter/material.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/message_input.dart';
-import 'user_profile_screen.dart'; // <--- 1. Import the new screen (Ensure the path is correct)
+import 'user_profile_screen.dart';
+import '../widgets/avatar_with_letter.dart';
 
 
 class ChatScreen extends StatelessWidget {
@@ -12,7 +14,8 @@ class ChatScreen extends StatelessWidget {
   final String userImageUrl;
 
 
-  const ChatScreen({
+  // FIX: const keyword রিমুভ করা হলো
+  ChatScreen({
     super.key,
     required this.chatId,
     required this.userName,
@@ -23,20 +26,26 @@ class ChatScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ... (rest of the build method is unchanged and correct)
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.secondary;
 
-    // NEW: Get the safe area padding from the bottom (System Navigation Bar Height)
+    String displayStatus;
+    if (userStatus == 'Online') {
+      displayStatus = 'Online';
+    } else if (userStatus.isNotEmpty) {
+      displayStatus = 'Last seen $userStatus';
+    } else {
+      displayStatus = 'Offline';
+    }
+
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      // Ensure Scaffold resizes when the keyboard opens
       resizeToAvoidBottomInset: true,
-      appBar: _buildChatAppBar(context, primaryColor, isDarkMode),
+      appBar: _buildChatAppBar(context, primaryColor, isDarkMode, displayStatus, userStatus == 'Online'),
 
-      // UPDATED: Wrapping the body content with Padding to account for the System Navigation Bar
       body: Padding(
-        // Apply bottom padding equal to the system's safe area height
         padding: EdgeInsets.only(bottom: bottomPadding > 0 ? bottomPadding : 0),
         child: Column(
           children: [
@@ -48,12 +57,12 @@ class ChatScreen extends StatelessWidget {
     );
   }
 
-  PreferredSizeWidget _buildChatAppBar(BuildContext context, Color primaryColor, bool isDarkMode) {
+  PreferredSizeWidget _buildChatAppBar(BuildContext context, Color primaryColor, bool isDarkMode, String displayStatus, bool isOnline) {
     return AppBar(
       backgroundColor: isDarkMode ? Theme.of(context).appBarTheme.backgroundColor : Colors.white,
       elevation: 0,
       titleSpacing: 0,
-      // 2. Wrap the title content with InkWell for tapping
+
       title: InkWell(
         onTap: () {
           // --- NAVIGATION TO USER PROFILE SCREEN ---
@@ -62,7 +71,7 @@ class ChatScreen extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => UserProfileScreen(
                 userName: userName,
-                userStatus: userStatus,
+                userStatus: displayStatus,
                 userImageUrl: userImageUrl,
               ),
             ),
@@ -71,9 +80,11 @@ class ChatScreen extends StatelessWidget {
         },
         child: Row(
           children: [
-            CircleAvatar(
+            AvatarWithLetter(
+              imageUrl: userImageUrl,
+              userName: userName,
               radius: 20,
-              backgroundImage: NetworkImage(userImageUrl),
+              isOnline: isOnline,
             ),
             const SizedBox(width: 10),
             Column(
@@ -88,10 +99,10 @@ class ChatScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  userStatus,
+                  displayStatus,
                   style: TextStyle(
                     fontSize: 12,
-                    color: userStatus == 'Online' ? Colors.green : Colors.grey,
+                    color: isOnline ? Colors.green : Colors.grey,
                   ),
                 ),
               ],

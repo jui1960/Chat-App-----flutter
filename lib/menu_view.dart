@@ -1,11 +1,23 @@
+// lib/screens/menu_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'theme_notifier.dart';
 import 'package:chat_app/screens/login_screen.dart';
+// ✅ AvatarWithLetter উইজেটটি ইমপোর্ট করা হয়েছে
+import '../widgets/avatar_with_letter.dart';
 
-class MenuView extends StatelessWidget {
+class MenuView extends StatefulWidget {
   const MenuView({super.key});
+
+  @override
+  State<MenuView> createState() => _MenuViewState();
+}
+
+class _MenuViewState extends State<MenuView> {
+  final _currentUser = FirebaseAuth.instance.currentUser;
 
   void _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
@@ -15,9 +27,21 @@ class MenuView extends StatelessWidget {
     );
   }
 
+  Stream<DocumentSnapshot>? _userStream;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_currentUser != null) {
+      _userStream = FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .snapshots();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor = isDarkMode ? const Color(0xFF1E2733) : Colors.white;
 
@@ -37,7 +61,7 @@ class MenuView extends StatelessWidget {
               ),
             ),
           ),
-          _buildProfileSection(context, user, surfaceColor),
+          _buildProfileSection(context, surfaceColor),
           const SizedBox(height: 25),
           _buildSectionHeader(context, 'Account & Tools'),
           _buildSettingsCard(
@@ -91,66 +115,81 @@ class MenuView extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileSection(BuildContext context, User? user, Color cardColor) {
-    final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
-
-    // Safety check: Get the first letter of the display name
-    String initials = 'U';
-    String? displayName = user?.displayName;
-
-    if (displayName != null && displayName.isNotEmpty) {
-      // FIX: Ensure the string is not empty before calling substring(0, 1)
-      initials = displayName.substring(0, 1).toUpperCase();
+  Widget _buildProfileSection(BuildContext context, Color cardColor) {
+    if (_currentUser == null || _userStream == null) {
+      return const Center(child: Text("User not logged in."));
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: (isDarkMode ? Colors.black.withOpacity(0.3) : Colors.grey.withOpacity(0.1)), blurRadius: 10, offset: const Offset(0, 5))],
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 35,
-            backgroundColor: theme.colorScheme.secondary,
-            child: Text(
-              initials, // Use the safely determined initial
-              style: const TextStyle(fontSize: 30, color: Colors.white, fontWeight: FontWeight.bold),
-            ),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _userStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error loading profile: ${snapshot.error}'));
+        }
+
+        final userData = snapshot.data!.data() as Map<String, dynamic>?;
+
+        final userImageUrl = userData?['imageUrl'] ?? '';
+        final displayName = userData?['fullName'] ?? userData?['username'] ?? 'New User';
+        final email = _currentUser!.email ?? 'Email not available';
+
+        final theme = Theme.of(context);
+        final isDarkMode = theme.brightness == Brightness.dark;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [BoxShadow(color: (isDarkMode ? Colors.black.withOpacity(0.3) : Colors.grey.withOpacity(0.1)), blurRadius: 10, offset: const Offset(0, 5))],
           ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName ?? 'New User',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color),
-                  overflow: TextOverflow.ellipsis,
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
+          child: Row(
+            children: [
+              // 🛑 FIX: CircleAvatar-কে AvatarWithLetter দিয়ে রিপ্লেস করা হলো
+              AvatarWithLetter(
+                imageUrl: userImageUrl,
+                userName: displayName,
+                radius: 35,
+                // Menu স্ক্রিনে অনলাইন ইন্ডিকেটর সাধারণত লাগে না, তাই false
+                isOnline: false,
+                onlineIndicatorBackgroundColor: cardColor,
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayName,
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      email,
+                      style: TextStyle(fontSize: 14, color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  user?.email ?? 'Status: Available',
-                  style: TextStyle(fontSize: 14, color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.lightBlueAccent),
+                onPressed: () {
+                  // TODO: Navigate to Edit Profile Screen
+                },
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.edit, color: Colors.lightBlueAccent),
-            onPressed: () {
-              // TODO: Navigate to Edit Profile Screen
-            },
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
+  // --- Helper Widgets (Unchanged) ---
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),

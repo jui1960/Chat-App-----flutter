@@ -1,4 +1,4 @@
-// lib/screens/home_screen.dart
+// lib/screens/home_screen.dart (FINAL UPDATED CODE)
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,6 +9,8 @@ import 'package:chat_app/screens/search_screen.dart';
 import 'login_screen.dart';
 import 'package:intl/intl.dart';
 import '../widgets/avatar_with_letter.dart';
+import 'user_status_tracker.dart';
+
 
 class ChatsView extends StatefulWidget {
   const ChatsView({super.key});
@@ -40,6 +42,7 @@ class _ChatsViewState extends State<ChatsView> {
           chatId: chatId,
           userName: peerName,
           userStatus: userStatus,
+          // 🛑 FIX: userImageUrl এর পরিবর্তে peerImageUrl ব্যবহার করা হয়েছে 
           userImageUrl: peerImageUrl,
         ),
       ),
@@ -48,6 +51,7 @@ class _ChatsViewState extends State<ChatsView> {
 
   void _logout() async {
     await FirebaseAuth.instance.signOut();
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -127,16 +131,13 @@ class _ChatsViewState extends State<ChatsView> {
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: allUsers.length,
-                  separatorBuilder: (context, index) => Divider(
-                      height: 1,
-                      indent: 80,
-                      endIndent: 10,
-                      color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFF1F1F1)),
+                  separatorBuilder: (context, index) => const SizedBox(height: 0),
                   itemBuilder: (context, index) {
                     final userData = allUsers[index].data() as Map<String, dynamic>;
                     final peerId = allUsers[index].id;
 
                     final username = userData['fullName'] ?? userData['username'] ?? 'Chat User';
+                    // Null Check এখানে সঠিক আছে
                     final userImageUrl = userData['imageUrl'] ?? 'https://via.placeholder.com/150';
 
                     final isOnline = userData['isOnline'] == true;
@@ -147,16 +148,15 @@ class _ChatsViewState extends State<ChatsView> {
                       userStatus = 'Online';
                     } else if (lastSeenTimestamp != null) {
                       final time = lastSeenTimestamp.toDate();
-                      userStatus = 'Last seen ${DateFormat('h:mm a').format(time)}';
+                      userStatus = DateFormat('h:mm a').format(time);
                     } else {
-                      userStatus = 'Offline';
+                      userStatus = '';
                     }
 
                     final chatId = _getChatId(currentUserId!, peerId);
 
                     // --- NESTED STREAMBUILDER for Real-Time Last Message ---
                     return StreamBuilder<QuerySnapshot>(
-                      // Real-time stream to listen for changes in the 'messages' subcollection
                       stream: FirebaseFirestore.instance
                           .collection('chats')
                           .doc(chatId)
@@ -169,7 +169,6 @@ class _ChatsViewState extends State<ChatsView> {
                         String lastTime = '';
 
                         if (messageSnapshot.hasData && messageSnapshot.data!.docs.isNotEmpty) {
-                          // মেসেজ লোড হলে
                           final messageData = messageSnapshot.data!.docs.first.data() as Map<String, dynamic>;
                           lastMessage = messageData['text'] ?? 'Image/File';
 
@@ -182,7 +181,7 @@ class _ChatsViewState extends State<ChatsView> {
 
                         // --- Final ListTile Widget ---
                         return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
                           leading: AvatarWithLetter(
                             imageUrl: userImageUrl,
                             userName: username,
@@ -205,10 +204,17 @@ class _ChatsViewState extends State<ChatsView> {
                               Text(lastTime,
                                   style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey.shade600 : Colors.grey)),
                               const SizedBox(height: 4),
-                              Text(userStatus,
-                                  style: TextStyle(fontSize: 12, color: isOnline ? Colors.green : Colors.grey)),
+                              if (userStatus.isNotEmpty)
+                                Text(
+                                    userStatus,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: isOnline ? Colors.green : Colors.grey
+                                    )
+                                ),
                             ],
                           ),
+                          // ✅ userImageUrl-কে _startChat এ পাস করা হচ্ছে
                           onTap: () => _startChat(peerId, username, userImageUrl, userStatus),
                         );
                       },
@@ -234,6 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final List<Widget> _widgetOptions = <Widget>[
     const ChatsView(),
+    // 🛑 warning: Unused import: 'screens/user_status_tracker.dart' (এটি দূর করতে চাইলে main.dart এ পরিবর্তন করুন)
     const MenuView(),
   ];
 
@@ -248,30 +255,33 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDarkMode ? Theme.of(context).scaffoldBackgroundColor : const Color(0xFFF0F5F8);
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: _widgetOptions.elementAt(_selectedIndex),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
-            label: 'Chats',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu),
-            label: 'Menu',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).colorScheme.secondary,
-        unselectedItemColor: isDarkMode ? Colors.white60 : Colors.grey,
-        onTap: _onItemTapped,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: isDarkMode ? const Color(0xFF1E2733) : Colors.white,
+    // UserStatusTracker কে উইজেট হিসেবে কল করা হয়েছে (যদি error না আসে)
+    return UserStatusTracker(
+      child: Scaffold(
+        backgroundColor: backgroundColor,
+        body: SafeArea(
+          child: _widgetOptions.elementAt(_selectedIndex),
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline),
+              activeIcon: Icon(Icons.chat_bubble),
+              label: 'Chats',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.menu),
+              label: 'Menu',
+            ),
+          ],
+          currentIndex: _selectedIndex,
+          selectedItemColor: Theme.of(context).colorScheme.secondary,
+          unselectedItemColor: isDarkMode ? Colors.white60 : Colors.grey,
+          onTap: _onItemTapped,
+          showUnselectedLabels: true,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: isDarkMode ? const Color(0xFF1E2733) : Colors.white,
+        ),
       ),
     );
   }

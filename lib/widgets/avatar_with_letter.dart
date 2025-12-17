@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class AvatarWithLetter extends StatelessWidget {
+  // imageUrl এবং userName-কে অবশ্যই non-nullable String হতে হবে।
+  // কল করার সময় null এলে, calling site-এ ?? '' ব্যবহার করতে হবে।
   final String imageUrl;
   final String userName;
   final double radius;
@@ -17,8 +19,10 @@ class AvatarWithLetter extends StatelessWidget {
   });
 
   // Determines if the URL is a placeholder/default URL
+  // এটি পরীক্ষা করে যে URL খালি, নাকি একটি ডিফল্ট URL।
   bool _isImageValid(String url) {
-    // এখানে আপনি আপনার ডিফল্ট/প্লেসহোল্ডার URL-এর সাথে তুলনা করতে পারেন
+    // URL যদি খালি হয় (''), তবে এটি false দেবে।
+    // ফলে Text Avatar দেখাবে।
     return url.isNotEmpty && url != 'https://via.placeholder.com/150';
   }
 
@@ -31,6 +35,7 @@ class AvatarWithLetter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // এখানে কোনো পরিবর্তন দরকার নেই, কারণ লজিক ঠিক আছে
     final bool useImage = _isImageValid(imageUrl);
     final String firstLetter = _getFirstLetter(userName);
 
@@ -41,7 +46,9 @@ class AvatarWithLetter extends StatelessWidget {
     final Widget avatar = CircleAvatar(
       radius: radius,
       backgroundColor: Theme.of(context).colorScheme.secondary,
-      backgroundImage: useImage ? NetworkImage(imageUrl) : null,
+      backgroundImage: useImage
+          ? NetworkImage(imageUrl) // এখানে এখন error দেবে না, কারণ imageUrl non-empty
+          : null,
       child: useImage
           ? null
           : Text(
