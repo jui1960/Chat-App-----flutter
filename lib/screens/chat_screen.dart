@@ -26,7 +26,6 @@ class ChatScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ... (rest of the build method is unchanged and correct)
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.secondary;
 
@@ -67,6 +66,7 @@ class ChatScreen extends StatelessWidget {
             userName: userName,
             userStatus: displayStatus,
             userImageUrl: userImageUrl,
+            chatId: chatId, // ✅ chatId পাস করা হলো
           ),
         ),
       );
@@ -79,7 +79,6 @@ class ChatScreen extends StatelessWidget {
       titleSpacing: 0,
 
       title: InkWell(
-        // ✅ নাম/প্রোফাইল পিকচারে ক্লিক করলে প্রোফাইল স্ক্রিনে যাবে (আগে থেকেই ছিল)
         onTap: navigateToUserProfile,
         child: Row(
           children: [
@@ -124,7 +123,6 @@ class ChatScreen extends StatelessWidget {
         ),
         IconButton(
           icon: Icon(Icons.more_vert, color: Theme.of(context).textTheme.bodyLarge?.color),
-          // 🛑 FIX: ৩-ডট আইকনে ক্লিক করলে প্রোফাইল স্ক্রিনে নেভিগেট হবে
           onPressed: navigateToUserProfile,
         ),
       ],

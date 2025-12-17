@@ -1,12 +1,22 @@
+// lib/widgets/message_input.dart (FINAL UPDATED CODE)
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // NEW
-import 'package:firebase_auth/firebase_auth.dart';     // NEW
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class MessageInput extends StatelessWidget {
   final String chatId;
 
   const MessageInput({super.key, required this.chatId});
+
+  // ✅ নতুন ফাংশন: chatId থেকে peerId বের করা (user1_user2 ফরম্যাট ধরে)
+  String _getPeerId(String currentUserId, String fullChatId) {
+    // chatId ফরমেট: uid1_uid2 (যেখানে uid1 < uid2)
+    final ids = fullChatId.split('_');
+    // যে আইডিটি currentUserId নয়, সেটিই peerId
+    return ids.firstWhere((id) => id != currentUserId, orElse: () => '');
+  }
+
 
   // New function to handle sending message logic
   void _sendMessage(BuildContext context, TextEditingController controller) async {
@@ -17,37 +27,45 @@ class MessageInput extends StatelessWidget {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      // Handle not logged in case (should not happen if routing is correct)
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('User not logged in.')),
       );
       return;
     }
 
+    final currentUserId = user.uid;
+    // ✅ FIX 1: peerId বের করা হলো
+    final peerId = _getPeerId(currentUserId, chatId);
+
+    if (peerId.isEmpty) {
+      debugPrint('Error: Could not determine peer ID from chatId: $chatId');
+      return;
+    }
+
     final data = {
       'text': messageText,
       'timestamp': Timestamp.now(),
-      'senderId': user.uid,
+      'senderId': currentUserId,
       'senderName': user.displayName ?? 'Anonymous',
     };
 
     try {
+      final firestore = FirebaseFirestore.instance;
+      final chatRef = firestore.collection('chats').doc(chatId);
+
       // 1. Save the message to Firestore
-      await FirebaseFirestore.instance
-          .collection('chats')
-          .doc(chatId)
+      await chatRef
           .collection('messages')
           .add(data);
 
-      // 2. Optional: Update the parent chat document with the last message info
-      await FirebaseFirestore.instance
-          .collection('chats')
-          .doc(chatId)
-          .set({
+      // ✅ FIX 2: মেইন চ্যাট ডক তৈরি/আপডেট করা হলো
+      // এটি হোম স্ক্রিনে নতুন চ্যাটটি দেখাতে সাহায্য করবে।
+      await chatRef.set({
+        // members অ্যারে যোগ করা হলো, যা হোম স্ক্রিনের where('members', arrayContains: currentUserId) কে সাপোর্ট করবে।
+        'members': [currentUserId, peerId],
         'lastMessage': messageText,
         'lastMessageTime': Timestamp.now(),
-        // Participants should also be saved here if the chat is new
-      }, SetOptions(merge: true));
+      }, SetOptions(merge: true)); // merge: true থাকায় পুরাতন ডেটা ওভাররাইট হবে না।
 
       // 3. Clear the input field
       controller.clear();

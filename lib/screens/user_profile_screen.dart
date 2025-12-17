@@ -1,28 +1,83 @@
+// lib/screens/user_profile_screen.dart (FINAL UPDATED CODE)
 
 import 'package:flutter/material.dart';
 import '../widgets/avatar_with_letter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ Firebase ইমপোর্ট করা হলো
 
 class UserProfileScreen extends StatelessWidget {
   final String userName;
   final String userStatus;
   final String userImageUrl;
+  final String chatId; // ✅ chatId প্যারামিটার যোগ করা হলো
 
   const UserProfileScreen({
     super.key,
     required this.userName,
     required this.userStatus,
     required this.userImageUrl,
+    required this.chatId, // ✅ chatId রিকোয়্যার্ড করা হলো
   });
+
+  // ✅ নতুন ডিলিট ফাংশন: Firebase থেকে চ্যাট ডিলিট করবে
+  Future<void> _deleteConversation(BuildContext context) async {
+    final firestore = FirebaseFirestore.instance;
+    final chatRef = firestore.collection('chats').doc(chatId);
+
+    try {
+      // 1. সাব-কালেকশন (messages) ডিলিট করা
+      // (প্রোডাকশন অ্যাপে ক্লাউড ফাংশন বা batch delete ব্যবহার করা উচিত। এখানে সহজ লুপ দেখানো হলো)
+      final messagesSnapshot = await chatRef.collection('messages').get();
+      for (final doc in messagesSnapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      // 2. মেইন চ্যাট ডক ডিলিট করা
+      await chatRef.delete();
+
+      // ডিলিট সফল হলে UserProfileScreen এবং ChatScreen থেকে ব্যাক করা
+      // এটি ডিলিট হওয়ার পর হোম স্ক্রিনে নিয়ে যাবে, যেখানে লিস্ট আপডেট হয়ে যাবে।
+      Navigator.of(context)
+        ..pop() // UserProfileScreen
+        ..pop(); // ChatScreen
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Conversation with $userName deleted successfully!')),
+      );
+
+    } catch (e) {
+      // ডিলিট ব্যর্থ হলে
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete chat: ${e.toString()}')),
+      );
+    }
+  }
+
 
   void _handleMenuSelection(BuildContext context, String result) {
     switch (result) {
       case 'delete':
-        Navigator.of(context)
-          ..pop()
-          ..pop();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Conversation with $userName deleted.')),
+      // ✅ ডিলিট করার আগে কনফার্মেশন ডায়ালগ দেখানো
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Delete Conversation?'),
+            content: Text('Are you sure you want to delete all messages with $userName? This action cannot be undone and will remove the chat from your list.'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Cancel'),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                },
+              ),
+              TextButton(
+                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                onPressed: () {
+                  Navigator.of(ctx).pop(); // ডায়ালগ বন্ধ
+                  _deleteConversation(context); // ডিলিট ফাংশন কল করা
+                },
+              ),
+            ],
+          ),
         );
         break;
       case 'block':
@@ -42,7 +97,6 @@ class UserProfileScreen extends StatelessWidget {
     final dividerColor = isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    // স্ট্যাটাস থেকে Online চেক করা হচ্ছে
     final isOnline = userStatus == 'Online';
 
 
@@ -60,16 +114,13 @@ class UserProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 16.0, bottom: 20.0),
                   child: Column(
                     children: [
-                      // 🛑 FIX: CircleAvatar-কে AvatarWithLetter দিয়ে রিপ্লেস করা হলো
                       AvatarWithLetter(
                         imageUrl: userImageUrl,
                         userName: userName,
                         radius: 40,
                         isOnline: isOnline,
-                        // প্রোফাইল স্ক্রিনের ব্যাকগ্রাউন্ড কালার ইন্ডিকেটরের জন্য পাস করা হলো
                         onlineIndicatorBackgroundColor: backgroundColor,
                       ),
-                      // --------------------------------------------------------
                       const SizedBox(height: 8),
                       Text(
                         userName,
@@ -135,7 +186,7 @@ class UserProfileScreen extends StatelessWidget {
                 _buildSettingsItem(
                     context, Icons.flag_outlined, 'Report', primaryColor, () {}),
                 _buildSettingsItem(
-                    context, Icons.delete_outline, 'Delete Chat', primaryColor, () {}),
+                    context, Icons.delete_outline, 'Delete Chat', primaryColor, () => _handleMenuSelection(context, 'delete')), // ✅ Delete বাটনে ক্লিক করলে ডিলিট লজিক কল হবে
 
                 // Safe Area Padding
                 SizedBox(height: bottomPadding + 10),
@@ -192,6 +243,7 @@ class UserProfileScreen extends StatelessWidget {
     );
   }
 
+  // (বাকি helper functions unchanged)
   Widget _buildSectionHeader(String title, bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
