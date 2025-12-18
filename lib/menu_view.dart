@@ -1,4 +1,4 @@
-// lib/screens/menu_view.dart
+// lib/screens/menu_view.dart (FINAL CORRECTED CODE)
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,9 +6,11 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'theme_notifier.dart';
 import 'package:chat_app/screens/login_screen.dart';
-// ✅ AvatarWithLetter উইজেটটি ইমপোর্ট করা হয়েছে
+// ✅ নতুন স্ক্রিন ইমপোর্ট করা হলো
+import 'package:chat_app/screens/edit_profile_screen.dart';
 import '../widgets/avatar_with_letter.dart';
 
+// ✅ MISSING PART 1: MenuView Class Definition
 class MenuView extends StatefulWidget {
   const MenuView({super.key});
 
@@ -17,16 +19,8 @@ class MenuView extends StatefulWidget {
 }
 
 class _MenuViewState extends State<MenuView> {
+  // ✅ MISSING PART 2: Field Initializations
   final _currentUser = FirebaseAuth.instance.currentUser;
-
-  void _logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
-  }
-
   Stream<DocumentSnapshot>? _userStream;
 
   @override
@@ -39,6 +33,26 @@ class _MenuViewState extends State<MenuView> {
           .snapshots();
     }
   }
+
+  // ✅ MISSING PART 3: Logout Method
+  void _logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
+  // নতুন এডিট ফাংশন (আপনার দেওয়া কোড)
+  void _editProfileName(BuildContext context, String currentName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditProfileScreen(currentDisplayName: currentName),
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -148,12 +162,10 @@ class _MenuViewState extends State<MenuView> {
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
           child: Row(
             children: [
-              // 🛑 FIX: CircleAvatar-কে AvatarWithLetter দিয়ে রিপ্লেস করা হলো
               AvatarWithLetter(
                 imageUrl: userImageUrl,
                 userName: displayName,
                 radius: 35,
-                // Menu স্ক্রিনে অনলাইন ইন্ডিকেটর সাধারণত লাগে না, তাই false
                 isOnline: false,
                 onlineIndicatorBackgroundColor: cardColor,
               ),
@@ -179,7 +191,7 @@ class _MenuViewState extends State<MenuView> {
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.lightBlueAccent),
                 onPressed: () {
-                  // TODO: Navigate to Edit Profile Screen
+                  _editProfileName(context, displayName);
                 },
               ),
             ],
