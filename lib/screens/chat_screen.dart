@@ -1,4 +1,4 @@
-// lib/screens/chat_screen.dart (FINAL UPDATED CODE)
+// lib/screens/chat_screen.dart (FINAL CODE WITH BLOCK CHECK LOGIC)
 
 import 'package:flutter/material.dart';
 import '../widgets/message_bubble.dart';
@@ -7,15 +7,16 @@ import 'user_profile_screen.dart';
 import '../widgets/avatar_with_letter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import '../services/chat_service.dart'; // ✅ ChatService ইমপোর্ট করা হলো
 
 class ChatScreen extends StatelessWidget {
   final String chatId;
-  final String userName; // Original name (will be used if no nickname is set)
+  final String userName;
   final String userStatus;
   final String userImageUrl;
 
-
+  // ✅ peerId বের করা হলো
+  final String peerId;
 
   ChatScreen({
     super.key,
@@ -23,8 +24,14 @@ class ChatScreen extends StatelessWidget {
     required this.userName,
     required this.userStatus,
     required this.userImageUrl,
-  });
+  }) : peerId = _getPeerId(FirebaseAuth.instance.currentUser!.uid, chatId);
 
+  // peerId বের করার ফাংশন
+  static String _getPeerId(String currentUserId, String fullChatId) {
+    // chatId ফরম্যাট: uid1_uid2 (যেখানে uid1 < uid2)
+    final ids = fullChatId.split('_');
+    return ids.firstWhere((id) => id != currentUserId, orElse: () => '');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +58,58 @@ class ChatScreen extends StatelessWidget {
         child: Column(
           children: [
             Expanded(child: MessageBubble(chatId: chatId)),
-            MessageInput(chatId: chatId),
+
+            // ✅ StreamBuilder: ব্লক স্ট্যাটাস চেক করা এবং কন্ডিশনালি MessageInput রেন্ডার করা
+            StreamBuilder<DocumentSnapshot>(
+              stream: ChatService().getBlockStatus(chatId),
+              builder: (context, snapshot) {
+                final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
+                // Firestore থেকে ব্লকিং স্ট্যাটাস চেক
+                final chatData = snapshot.hasData && snapshot.data!.exists
+                    ? snapshot.data!.data() as Map<String, dynamic>? ?? {}
+                    : {};
+
+                // চেক: আমি কি ইউজারকে ব্লক করেছি?
+                final isBlockedByMe = chatData['blockedBy_$currentUserId'] == true;
+
+                // চেক: ইউজার কি আমাকে ব্লক করেছে?
+                final isBlockedByPeer = chatData['blockedBy_$peerId'] == true;
+
+                if (isBlockedByMe) {
+                  return _buildBlockedStatusWidget(context, 'You have blocked $userName.', isBlockedByMe);
+                }
+
+                if (isBlockedByPeer) {
+                  return _buildBlockedStatusWidget(context, '$userName has blocked you. You cannot send messages.', isBlockedByMe);
+                }
+
+                // যদি কেউ ব্লক না করে, তবে মেসেজ ইনপুট দেখাও
+                return MessageInput(chatId: chatId);
+              },
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ নতুন উইজেট: ব্লক স্ট্যাটাস দেখানোর জন্য
+  Widget _buildBlockedStatusWidget(BuildContext context, String message, bool isBlockedByMe) {
+    final primaryColor = Theme.of(context).colorScheme.secondary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      // আমি ব্লক করলে একটু ভিন্ন রং ব্যবহার করতে পারি
+      color: isBlockedByMe ? Colors.red.shade100 : primaryColor.withOpacity(0.1),
+      child: Center(
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: isBlockedByMe ? Colors.red.shade800 : primaryColor,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

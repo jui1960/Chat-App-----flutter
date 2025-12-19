@@ -1,4 +1,4 @@
-// lib/widgets/message_input.dart (FINAL UPDATED CODE)
+// lib/widgets/message_input.dart (FINAL CODE FOR 1-to-1 & GROUP CHAT)
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,24 +6,25 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class MessageInput extends StatelessWidget {
   final String chatId;
+  // ✅ গ্রুপ চ্যাট ফ্ল্যাগ যোগ করা হলো
+  final bool isGroupChat;
 
-  const MessageInput({super.key, required this.chatId});
+  const MessageInput({
+    super.key,
+    required this.chatId,
+    this.isGroupChat = false, // ডিফল্ট 1-to-1 চ্যাট
+  });
 
-  // ✅ নতুন ফাংশন: chatId থেকে peerId বের করা (user1_user2 ফরম্যাট ধরে)
+  // existing function: chatId থেকে peerId বের করা (user1_user2 ফরম্যাট ধরে)
   String _getPeerId(String currentUserId, String fullChatId) {
-    // chatId ফরমেট: uid1_uid2 (যেখানে uid1 < uid2)
     final ids = fullChatId.split('_');
-    // যে আইডিটি currentUserId নয়, সেটিই peerId
     return ids.firstWhere((id) => id != currentUserId, orElse: () => '');
   }
 
-
-  // New function to handle sending message logic
+  // New function to handle sending message logic (Unified for 1-to-1 and Group)
   void _sendMessage(BuildContext context, TextEditingController controller) async {
     final messageText = controller.text.trim();
-    if (messageText.isEmpty) {
-      return;
-    }
+    if (messageText.isEmpty) return;
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -34,18 +35,22 @@ class MessageInput extends StatelessWidget {
     }
 
     final currentUserId = user.uid;
-    // ✅ FIX 1: peerId বের করা হলো
-    final peerId = _getPeerId(currentUserId, chatId);
+    String? peerId;
 
-    if (peerId.isEmpty) {
-      debugPrint('Error: Could not determine peer ID from chatId: $chatId');
-      return;
+    // 1. peerId লজিক (শুধুমাত্র 1-to-1 চ্যাটের জন্য)
+    if (!isGroupChat) {
+      peerId = _getPeerId(currentUserId, chatId);
+      if (peerId!.isEmpty) {
+        debugPrint('Error: Could not determine peer ID from chatId: $chatId');
+        return;
+      }
     }
 
     final data = {
       'text': messageText,
       'timestamp': Timestamp.now(),
       'senderId': currentUserId,
+      // গ্রুপ চ্যাটের জন্য senderName আবশ্যক
       'senderName': user.displayName ?? 'Anonymous',
     };
 
@@ -53,21 +58,26 @@ class MessageInput extends StatelessWidget {
       final firestore = FirebaseFirestore.instance;
       final chatRef = firestore.collection('chats').doc(chatId);
 
-      // 1. Save the message to Firestore
+      // 2. Save the message to Firestore
       await chatRef
           .collection('messages')
           .add(data);
 
-      // ✅ FIX 2: মেইন চ্যাট ডক তৈরি/আপডেট করা হলো
-      // এটি হোম স্ক্রিনে নতুন চ্যাটটি দেখাতে সাহায্য করবে।
-      await chatRef.set({
-        // members অ্যারে যোগ করা হলো, যা হোম স্ক্রিনের where('members', arrayContains: currentUserId) কে সাপোর্ট করবে।
-        'members': [currentUserId, peerId],
+      // 3. মেইন চ্যাট ডক তৈরি/আপডেট করা হলো
+      final updateData = {
         'lastMessage': messageText,
         'lastMessageTime': Timestamp.now(),
-      }, SetOptions(merge: true)); // merge: true থাকায় পুরাতন ডেটা ওভাররাইট হবে না।
+        'isGroup': isGroupChat, // ফ্ল্যাগ সেট করা হলো
+      };
 
-      // 3. Clear the input field
+      // শুধুমাত্র 1-to-1 চ্যাটের জন্য members অ্যারে আপডেট করা
+      if (!isGroupChat && peerId != null) {
+        updateData['members'] = [currentUserId, peerId];
+      }
+
+      await chatRef.set(updateData, SetOptions(merge: true));
+
+      // 4. Clear the input field
       controller.clear();
 
     } catch (e) {
