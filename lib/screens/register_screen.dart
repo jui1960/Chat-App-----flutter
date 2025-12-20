@@ -16,6 +16,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
   bool loading = false;
+  // ✅ নতুন স্টেট: পাসওয়ার্ড ভিসিবিলিটি ট্র্যাক করার জন্য
+  bool _isPasswordVisible = false;
 
   void signup() async {
     // Basic validation
@@ -183,7 +185,13 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: passCtrl,
                   hintText: 'Password (min 6 chars)',
                   icon: Icons.lock_outline,
-                  obscureText: true,
+                  obscureText: !_isPasswordVisible,
+                  isPasswordField: true,
+                  onVisibilityToggle: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
                 ),
                 const SizedBox(height: 30),
                 loading
@@ -210,7 +218,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // --- HELPER FUNCTION: Input Field ---
+  // --- HELPER FUNCTION: Input Field (সংশোধিত) ---
   Widget _buildInputField(
       BuildContext context, {
         required TextEditingController controller,
@@ -218,6 +226,8 @@ class _SignupScreenState extends State<SignupScreen> {
         required IconData icon,
         bool obscureText = false,
         TextInputType keyboardType = TextInputType.text,
+        bool isPasswordField = false,
+        VoidCallback? onVisibilityToggle,
       }) {
     const Color primaryColor = Colors.lightBlueAccent;
 
@@ -230,6 +240,18 @@ class _SignupScreenState extends State<SignupScreen> {
         hintText: hintText,
         hintStyle: TextStyle(color: Colors.grey.shade600),
         prefixIcon: Icon(icon, color: Colors.grey.shade500),
+
+        // ✅ Suffix Icon যোগ করা হলো
+        suffixIcon: isPasswordField
+            ? IconButton(
+          icon: Icon(
+            obscureText ? Icons.visibility_off : Icons.visibility,
+            color: Colors.grey.shade500,
+          ),
+          onPressed: onVisibilityToggle,
+        )
+            : null,
+
         filled: true,
         fillColor: Colors.black.withOpacity(0.3),
         border: OutlineInputBorder(
@@ -248,7 +270,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // --- HELPER FUNCTION: Signup Button ---
+  // --- HELPER FUNCTION: Signup Button (Unchanged) ---
   Widget _buildSignupButton(BuildContext context, VoidCallback onPressed) {
     return Container(
       width: double.infinity,
