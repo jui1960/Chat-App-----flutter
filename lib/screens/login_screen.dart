@@ -31,9 +31,25 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } catch (e) {
+      // ✅ সংশোধিত error handling
+      String errorMessage = "Login failed. Please check your network connection.";
+
+      if (e is FirebaseAuthException) {
+        // user-not-found, wrong-password, invalid-email, or invalid-credential
+        // এই error codeগুলি সাধারণত বোঝায় যে ইউজারনেম/পাসওয়ার্ড ভুল বা অ্যাকাউন্ট নেই।
+        if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-email' || e.code == 'invalid-credential') {
+          errorMessage = "This email and password combination is not registered.";
+        } else {
+          // অন্যান্য Firebase Authentication error (e.g., too-many-requests)
+          errorMessage = e.message ?? "Authentication failed.";
+        }
+      } else {
+        errorMessage = e.toString();
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Login failed: ${e.toString()}"),
+          content: Text(errorMessage),
           backgroundColor: Colors.red,
         ),
       );
