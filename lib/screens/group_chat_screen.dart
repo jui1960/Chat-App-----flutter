@@ -1,13 +1,13 @@
-// lib/screens/group_chat_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
-// আপনার ফাইল কাঠামো অনুযায়ী ইমপোর্ট
-import '../widgets/message_bubble.dart';
-import '../widgets/message_input.dart';
+// Alias ব্যবহার করা হলো
+import '../widgets/message_input.dart' as InputWidget;
+// MessageBubble-এর জন্য কোন Alias প্রয়োজন নেই কারণ আমরা _GroupMessageBubbleContent ব্যবহার করছি
+// কিন্তু যদি মূল MessageBubble-ও ব্যবহার করা হয়, তবে Alias দরকার হবে।
+// যেহেতু মেসেজ স্ট্রিম এখানে হ্যান্ডেল হচ্ছে, তাই শুধু InputWidget-এর Alias যথেষ্ট।
 import '../widgets/group_avatar.dart';
 
 class GroupChatScreen extends StatefulWidget {
@@ -28,9 +28,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   final _firestore = FirebaseFirestore.instance;
   final _currentUserUid = FirebaseAuth.instance.currentUser!.uid;
 
-  // এটি MessageInput উইজেটের মাধ্যমে হ্যান্ডেল করা হবে,
-  // তাই এখানে শুধু UI লজিক থাকবে।
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,7 +45,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       ),
       body: Column(
         children: [
-          // Expanded অংশটি এখন মেসেজ স্ট্রিম এবং মেসেজ বাবল রেন্ডার করবে
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _firestore
@@ -81,7 +77,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     final senderName = messageData['senderName'] as String?;
                     final timestamp = messageData['timestamp'] as Timestamp;
 
-                    // --- Time Display Logic (message_bubble.dart থেকে কপি করা) ---
+                    // Time Display Logic
                     bool shouldShowTime = false;
                     final nextIndex = index + 1;
 
@@ -97,28 +93,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     } else if (nextIndex == loadedMessages.length) {
                       shouldShowTime = true;
                     }
-                    // ---------------------------
-
-                    // ✅ MessageBubbleContent ব্যবহার করা হচ্ছে
-                    // Note: আমরা _MessageBubbleContent উইজেটটিকে এখানে কপি করিনি।
-                    // পরিবর্তে, আমরা ধরে নিচ্ছি আপনার MessageBubble উইজেটটি এখন
-                    // অন্যান্য প্যারামিটার ছাড়া (শুধু chatId দিয়ে) মেসেজ লিস্ট দেখায়।
-                    // যদি না দেখায়, তবে আপনাকে এটি ঠিক করতে হবে।
-
-                    // ❌ যেহেতু আপনার lib/widgets/message_bubble.dart এ সমস্ত লজিক আছে,
-                    // তাই 1-to-1 চ্যাটের মতোই শুধু chatId দিয়ে MessageBubble কল করা উচিত নয়।
-                    // আপনাকে মেসেজ স্ট্রিম এখানে হ্যান্ডেল করতে হবে এবং মেসেজ বাবল উইজেট ব্যবহার করতে হবে।
-
-                    // যেহেতু আপনি মেসেজ স্ট্রিম এখানে হ্যান্ডেল করছেন,
-                    // তাই আপনি আপনার মূল 'lib/widgets/message_bubble.dart'
-                    // ফাইলের 'MessageBubble' ক্লাসের পরিবর্তে,
-                    // তার ভিতরের '_MessageBubbleContent' লজিকটি ব্যবহার করতে পারেন।
-
-                    // --- Message Content Rendering (using _MessageBubbleContent logic from message_bubble.dart) ---
-                    // এটি গ্রুপ চ্যাটের জন্য নতুন লজিক প্রয়োগ করবে
-
-                    final messageTime = timestamp.toDate();
-                    final timeString = TimeOfDay.fromDateTime(messageTime).format(context);
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
@@ -137,9 +111,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                                 ),
                               ),
                             ),
-                          // এখানে আপনার কাস্টম বাবল রেন্ডারিং লজিক বা
-                          // _MessageBubbleContent উইজেটটি ব্যবহার করুন।
-                          // আপাতত ধরে নিচ্ছি আপনি আপনার মেসেজ বাবল উইজেটকে এইভাবে ব্যবহার করতে চান:
                           _GroupMessageBubbleContent(
                             key: ValueKey(message.id),
                             message: currentMessageText,
@@ -157,10 +128,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             ),
           ),
 
-          // ✅ MessageInput ব্যবহার করা হলো (isGroupChat=true)
-          MessageInput(
+          // Alias ব্যবহার করে MessageInput কল করা হলো
+          InputWidget.MessageInput(
             chatId: widget.chatId,
-            isGroupChat: true, // গ্রুপ চ্যাটের জন্য ফ্ল্যাগ
+            isGroupChat: true,
           ),
         ],
       ),
@@ -168,8 +139,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   }
 }
 
-// যেহেতু আপনার _MessageBubbleContent ক্লাসে senderName নেই, তাই আমরা গ্রুপ চ্যাটের জন্য
-// একটি সহজ উইজেট তৈরি করছি যা নাম দেখাবে।
 class _GroupMessageBubbleContent extends StatelessWidget {
   const _GroupMessageBubbleContent({
     super.key,
@@ -188,7 +157,6 @@ class _GroupMessageBubbleContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine Bubble colors based on isMe and theme
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.secondary;
 

@@ -1,5 +1,3 @@
-// lib/screens/edit_profile_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,7 +19,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // বর্তমান নাম দিয়ে টেক্সট ফিল্ড পূরণ করা
     _nameController.text = widget.currentDisplayName;
   }
 
@@ -40,7 +37,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null || newName.isEmpty || newName == widget.currentDisplayName) {
-      // যদি নাম পরিবর্তন না হয় বা ইউজার লগইন করা না থাকে
       Navigator.of(context).pop();
       return;
     }
@@ -50,19 +46,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
 
     try {
-      // Firestore-এ 'users' কালেকশনে 'fullName' ফিল্ড আপডেট করা
       await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
         'fullName': newName,
       });
 
-      // Firebase Auth প্রোফাইলও আপডেট করা (ঐচ্ছিক)
       await user.updateDisplayName(newName);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile Name updated successfully!')),
         );
-        Navigator.of(context).pop(); // মেনু স্ক্রিনে ফিরে যাওয়া
+        Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/avatar_with_letter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/chat_service.dart'; // ChatService ইমপোর্ট করা হলো
+import '../services/chat_service.dart';
 
 class UserProfileScreen extends StatelessWidget {
   final String userName;
@@ -22,7 +22,7 @@ class UserProfileScreen extends StatelessWidget {
         peerId = _getPeerId(FirebaseAuth.instance.currentUser!.uid, chatId);
 
   static String _getPeerId(String currentUserId, String fullChatId) {
-    // chatId ফরম্যাট: uid1_uid2 (যেখানে uid1 < uid2)
+
     final ids = fullChatId.split('_');
     return ids.firstWhere((id) => id != currentUserId, orElse: () => '');
   }
@@ -42,7 +42,7 @@ class UserProfileScreen extends StatelessWidget {
 
     try {
       if (newNickname == null || newNickname.isEmpty) {
-        // Nickname মুছে ফেলা (Clear Nickname)
+
         await chatRef.update({
           nicknameKey: FieldValue.delete(),
         });
@@ -50,7 +50,7 @@ class UserProfileScreen extends StatelessWidget {
           SnackBar(content: Text('Nickname cleared for $userName')),
         );
       } else {
-        // Nickname সেট করা
+
         await chatRef.set({
           nicknameKey: newNickname,
         }, SetOptions(merge: true));
@@ -60,7 +60,7 @@ class UserProfileScreen extends StatelessWidget {
         );
       }
       if(Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(); // ডায়ালগ বন্ধ করা
+        Navigator.of(context).pop();
       }
 
     } catch (e) {
@@ -70,12 +70,12 @@ class UserProfileScreen extends StatelessWidget {
     }
   }
 
-  // ✅ নিকনেম ডায়ালগ দেখানো (ডার্ক মোড ফিক্সড)
+
   void _showSetNicknameDialog(BuildContext context) {
     final controller = TextEditingController();
     final primaryColor = Theme.of(context).colorScheme.secondary;
 
-    // ডার্ক মোড চেক এবং ডায়ালগ কালার নির্ধারণ
+
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final dialogBackgroundColor = isDarkMode ? Theme.of(context).colorScheme.surface : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
@@ -85,27 +85,27 @@ class UserProfileScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        // ফিক্সড: থিম অনুযায়ী ব্যাকগ্রাউন্ড রং ব্যবহার করা হলো
+
         backgroundColor: dialogBackgroundColor,
 
         title: Text('Set Nickname for $userName',
-            // ফিক্সড: টাইটেলের টেক্সট কালার থিম অনুযায়ী
+
             style: TextStyle(color: textColor)),
 
         content: TextField(
           controller: controller,
-          // ফিক্সড: টেক্সটের কালার থিম অনুযায়ী
+
           style: TextStyle(color: textColor),
 
           decoration: InputDecoration(
             hintText: "Enter Nickname",
-            // ফিক্সড: হিন্টের কালার থিম অনুযায়ী
+
             hintStyle: TextStyle(color: hintColor),
             focusedBorder: UnderlineInputBorder(
               borderSide: BorderSide(color: primaryColor, width: 2),
             ),
             enabledBorder: UnderlineInputBorder(
-              // ফিক্সড: সক্ষম বর্ডারের রং ডার্ক মোডে সামঞ্জস্যপূর্ণ
+
               borderSide: BorderSide(color: isDarkMode ? Colors.grey.shade700 : Colors.grey),
             ),
           ),
@@ -113,14 +113,14 @@ class UserProfileScreen extends StatelessWidget {
         ),
         actions: <Widget>[
           TextButton(
-            // ফিক্সড: ক্যান্সেল বাটন টেক্সটের রং
+
             child: Text('Cancel', style: TextStyle(color: buttonColor)),
             onPressed: () {
               Navigator.of(ctx).pop();
             },
           ),
           TextButton(
-            // Set বাটন প্রিমাারি কালার ব্যবহার করবে
+
             child: Text('Set', style: TextStyle(color: primaryColor)),
             onPressed: () {
               _setNickname(context, controller.text.trim());
@@ -143,7 +143,7 @@ class UserProfileScreen extends StatelessWidget {
 
       await chatRef.delete();
 
-      // দুটি pop() ব্যবহার করা হয়েছে: ১. ডিলিট ডায়ালগ বন্ধ করা, ২. ChatScreen এ ফেরা
+
       Navigator.of(context)
         ..pop()
         ..pop();
@@ -165,7 +165,7 @@ class UserProfileScreen extends StatelessWidget {
 
     final shouldBlock = !currentlyBlocked;
 
-    // ডার্ক মোড চেক এবং থিম কালার ডেটা
+
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.secondary;
     final dialogBackgroundColor = isDarkMode ? Theme.of(context).colorScheme.surface : Colors.white;
@@ -173,38 +173,38 @@ class UserProfileScreen extends StatelessWidget {
     final contentColor = isDarkMode ? Colors.white70 : Colors.black87;
 
 
-    // ডায়ালগ দেখানো
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        // ডার্ক মোডে ডায়ালগের ব্যাকগ্রাউন্ড কালার নিশ্চিত করা
+
         backgroundColor: dialogBackgroundColor,
 
         title: Text(
           shouldBlock ? 'Block $userName?' : 'Unblock $userName?',
-          // টাইটেলের টেক্সট কালার নিশ্চিত করা
+
           style: TextStyle(color: textColor),
         ),
         content: Text(
           shouldBlock
               ? 'Are you sure you want to block $userName? You will not be able to send or receive messages from them.'
               : 'Are you sure you want to unblock $userName? You will be able to send and receive messages again.',
-          // কনটেন্টের টেক্সট কালার নিশ্চিত করা
+
           style: TextStyle(color: contentColor),
         ),
         actions: <Widget>[
-          // Cancel বাটন
+
           TextButton(
             child: Text('Cancel', style: TextStyle(color: contentColor)),
             onPressed: () => Navigator.of(ctx).pop(),
           ),
 
-          // Block/Unblock বাটন
+
           TextButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
               try {
-                // ChatService এর মাধ্যমে ব্লক স্ট্যাটাস আপডেট করা
+
                 await ChatService().updateBlockStatus(chatId, peerId, shouldBlock);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(shouldBlock ? '$userName blocked.' : '$userName unblocked.')),
@@ -228,7 +228,7 @@ class UserProfileScreen extends StatelessWidget {
 
 
   void _handleMenuSelection(BuildContext context, String result) {
-    // ডার্ক মোড চেক এবং থিম কালার ডেটা (ডিলিট ডায়ালগের জন্য)
+
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final dialogBackgroundColor = isDarkMode ? Theme.of(context).colorScheme.surface : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
@@ -240,7 +240,7 @@ class UserProfileScreen extends StatelessWidget {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            // ডার্ক মোডে ব্যাকগ্রাউন্ড সেট
+
             backgroundColor: dialogBackgroundColor,
 
             title: Text('Delete Conversation?', style: TextStyle(color: textColor)),
@@ -267,9 +267,9 @@ class UserProfileScreen extends StatelessWidget {
         );
         break;
       case 'block_toggle':
-      // এটি StreamBuilder এর মধ্যে হ্যান্ডেল করা হবে
+
         break;
-    //... (অন্যান্য মেনু আইটেম)
+
     }
   }
 
@@ -289,7 +289,7 @@ class UserProfileScreen extends StatelessWidget {
       backgroundColor: backgroundColor,
       body: CustomScrollView(
         slivers: [
-          // AppBar এর মধ্যে StreamBuilder যোগ করা হলো Block/Unblock টেক্সট দেখানোর জন্য
+
           StreamBuilder<DocumentSnapshot>(
             stream: ChatService().getBlockStatus(chatId),
             builder: (context, snapshot) {
@@ -297,7 +297,7 @@ class UserProfileScreen extends StatelessWidget {
                   ? (snapshot.data!.data() as Map<String, dynamic>? ?? {})[blockedByKey] == true
                   : false;
 
-              // কাস্টম অ্যাপবার (PopupMenuButton এর জন্য)
+
               return _buildCustomAppBar(
                 context, primaryColor, isDarkMode,
                     (ctx, result) {
@@ -308,7 +308,7 @@ class UserProfileScreen extends StatelessWidget {
                   }
                 },
                 backgroundColor,
-                isBlocked: isBlocked, // ব্লক স্ট্যাটাস পাস করা হলো
+                isBlocked: isBlocked,
               );
             },
           ),
@@ -329,7 +329,7 @@ class UserProfileScreen extends StatelessWidget {
                         onlineIndicatorBackgroundColor: backgroundColor,
                       ),
                       const SizedBox(height: 8),
-                      // StreamBuilder: নিকনেম/আসল নাম ডিসপ্লে (You ছাড়া)
+
                       StreamBuilder<DocumentSnapshot>(
                         stream: FirebaseFirestore.instance.collection('chats').doc(chatId).snapshots(),
                         builder: (context, chatSnapshot) {
@@ -384,12 +384,12 @@ class UserProfileScreen extends StatelessWidget {
 
                 // 2. Customization Block
                 _buildSectionHeader('Customization', isDarkMode),
-                // Nickname সেট করার অপশন
+
                 _buildSettingsItem(
                     context, Icons.person_outline, 'Set Nickname', primaryColor,
                         () => _showSetNicknameDialog(context)),
 
-                // অপশন: Clear Nickname
+
                 _buildSettingsItem(
                     context, Icons.clear_all, 'Clear Nickname', primaryColor,
                         () => _setNickname(context, null)),
@@ -413,7 +413,7 @@ class UserProfileScreen extends StatelessWidget {
 
                 // 4. Privacy & Support
                 _buildSectionHeader('Privacy & Support', isDarkMode),
-                // ব্লক বাটনকে StreamBuilder দিয়ে পরিবর্তন করা হলো
+
                 StreamBuilder<DocumentSnapshot>(
                   stream: ChatService().getBlockStatus(chatId),
                   builder: (context, snapshot) {
@@ -423,10 +423,10 @@ class UserProfileScreen extends StatelessWidget {
 
                     return _buildSettingsItem(
                       context,
-                      isBlocked ? Icons.lock_open_outlined : Icons.block_outlined, // আইকন পরিবর্তন
-                      isBlocked ? 'Unblock' : 'Block', // টেক্সট পরিবর্তন
-                      isBlocked ? Colors.green : Colors.red, // কালার পরিবর্তন
-                          () => _handleBlock(context, isBlocked), // ব্লক/আনব্লক ফাংশন
+                      isBlocked ? Icons.lock_open_outlined : Icons.block_outlined,
+                      isBlocked ? 'Unblock' : 'Block',
+                      isBlocked ? Colors.green : Colors.red,
+                          () => _handleBlock(context, isBlocked),
                     );
                   },
                 ),

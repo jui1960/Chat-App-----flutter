@@ -1,13 +1,11 @@
-// lib/screens/chat_screen.dart (FINAL CODE WITH BLOCK CHECK LOGIC)
-
 import 'package:flutter/material.dart';
-import '../widgets/message_bubble.dart';
-import '../widgets/message_input.dart';
+import '../widgets/message_bubble.dart' as BubbleWidget;
+import '../widgets/message_input.dart' as InputWidget;
 import 'user_profile_screen.dart';
 import '../widgets/avatar_with_letter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/chat_service.dart'; // ✅ ChatService ইমপোর্ট করা হলো
+import '../services/chat_service.dart';
 
 class ChatScreen extends StatelessWidget {
   final String chatId;
@@ -15,7 +13,6 @@ class ChatScreen extends StatelessWidget {
   final String userStatus;
   final String userImageUrl;
 
-  // ✅ peerId বের করা হলো
   final String peerId;
 
   ChatScreen({
@@ -26,9 +23,7 @@ class ChatScreen extends StatelessWidget {
     required this.userImageUrl,
   }) : peerId = _getPeerId(FirebaseAuth.instance.currentUser!.uid, chatId);
 
-  // peerId বের করার ফাংশন
   static String _getPeerId(String currentUserId, String fullChatId) {
-    // chatId ফরম্যাট: uid1_uid2 (যেখানে uid1 < uid2)
     final ids = fullChatId.split('_');
     return ids.firstWhere((id) => id != currentUserId, orElse: () => '');
   }
@@ -57,23 +52,18 @@ class ChatScreen extends StatelessWidget {
         padding: EdgeInsets.only(bottom: bottomPadding > 0 ? bottomPadding : 0),
         child: Column(
           children: [
-            Expanded(child: MessageBubble(chatId: chatId)),
+            Expanded(child: BubbleWidget.MessageBubble(chatId: chatId)),
 
-            // ✅ StreamBuilder: ব্লক স্ট্যাটাস চেক করা এবং কন্ডিশনালি MessageInput রেন্ডার করা
             StreamBuilder<DocumentSnapshot>(
               stream: ChatService().getBlockStatus(chatId),
               builder: (context, snapshot) {
                 final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
-                // Firestore থেকে ব্লকিং স্ট্যাটাস চেক
                 final chatData = snapshot.hasData && snapshot.data!.exists
                     ? snapshot.data!.data() as Map<String, dynamic>? ?? {}
                     : {};
 
-                // চেক: আমি কি ইউজারকে ব্লক করেছি?
                 final isBlockedByMe = chatData['blockedBy_$currentUserId'] == true;
-
-                // চেক: ইউজার কি আমাকে ব্লক করেছে?
                 final isBlockedByPeer = chatData['blockedBy_$peerId'] == true;
 
                 if (isBlockedByMe) {
@@ -81,11 +71,10 @@ class ChatScreen extends StatelessWidget {
                 }
 
                 if (isBlockedByPeer) {
-                  return _buildBlockedStatusWidget(context, '$userName has blocked you. You cannot send messages.', isBlockedByMe);
+                  return _buildBlockedStatusWidget(context, '$userName has blocked you. You cannot send messages.', isBlockedByPeer);
                 }
 
-                // যদি কেউ ব্লক না করে, তবে মেসেজ ইনপুট দেখাও
-                return MessageInput(chatId: chatId);
+                return InputWidget.MessageInput(chatId: chatId);
               },
             ),
           ],
@@ -94,13 +83,11 @@ class ChatScreen extends StatelessWidget {
     );
   }
 
-  // ✅ নতুন উইজেট: ব্লক স্ট্যাটাস দেখানোর জন্য
   Widget _buildBlockedStatusWidget(BuildContext context, String message, bool isBlockedByMe) {
     final primaryColor = Theme.of(context).colorScheme.secondary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      // আমি ব্লক করলে একটু ভিন্ন রং ব্যবহার করতে পারি
       color: isBlockedByMe ? Colors.red.shade100 : primaryColor.withOpacity(0.1),
       child: Center(
         child: Text(
@@ -116,7 +103,6 @@ class ChatScreen extends StatelessWidget {
   }
 
   PreferredSizeWidget _buildChatAppBar(BuildContext context, Color primaryColor, bool isDarkMode, String displayStatus, bool isOnline) {
-    // --- কমন নেভিগেশন ফাংশন ---
     void navigateToUserProfile() {
       Navigator.push(
         context,
@@ -130,7 +116,6 @@ class ChatScreen extends StatelessWidget {
         ),
       );
     }
-    // ----------------------------
 
     return AppBar(
       backgroundColor: isDarkMode ? Theme.of(context).appBarTheme.backgroundColor : Colors.white,
@@ -148,7 +133,6 @@ class ChatScreen extends StatelessWidget {
               isOnline: isOnline,
             ),
             const SizedBox(width: 10),
-            // ✅ StreamBuilder to dynamically show Nickname or Original Name
             StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance.collection('chats').doc(chatId).snapshots(),
               builder: (context, chatSnapshot) {
@@ -169,7 +153,7 @@ class ChatScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      displayedName, // ✅ নিকনেম দেখানো হলো (You ছাড়া)
+                      displayedName,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

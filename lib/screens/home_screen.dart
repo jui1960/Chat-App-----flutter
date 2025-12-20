@@ -4,21 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-
-// 1. lib/ ফোল্ডারের ফাইল:
 import '../menu_view.dart';
-
-// 2. lib/screens/ ফোল্ডারের ফাইল:
 import 'chat_screen.dart';
 import 'search_screen.dart';
 import 'login_screen.dart';
 import 'user_status_tracker.dart';
-import 'create_group_screen.dart'; // ✅ গ্রুপ তৈরির স্ক্রিন
-import 'group_chat_screen.dart'; // ✅ গ্রুপ চ্যাট স্ক্রিন
+import 'create_group_screen.dart';
+import 'group_chat_screen.dart';
 
-// 3. lib/widgets/ ফোল্ডারের ফাইল:
 import '../widgets/avatar_with_letter.dart';
-import '../widgets/group_avatar.dart'; // ✅ গ্রুপ আভাটার
+import '../widgets/group_avatar.dart';
 
 class ChatsView extends StatefulWidget {
   const ChatsView({super.key});
@@ -31,7 +26,7 @@ class _ChatsViewState extends State<ChatsView> {
   final currentUserId = FirebaseAuth.instance.currentUser?.uid;
   final firestore = FirebaseFirestore.instance;
 
-  // ওয়ান-টু-ওয়ান চ্যাটের জন্য ব্যবহৃত
+
   String _getChatId(String user1Id, String user2Id) {
     if (user1Id.compareTo(user2Id) > 0) {
       return '${user1Id}_$user2Id';
@@ -40,7 +35,7 @@ class _ChatsViewState extends State<ChatsView> {
     }
   }
 
-  // ওয়ান-টু-ওয়ান চ্যাট শুরু করা
+
   void _startChat(String peerId, String peerName, String peerImageUrl, String userStatus) {
     if (currentUserId == null) return;
 
@@ -59,7 +54,7 @@ class _ChatsViewState extends State<ChatsView> {
     );
   }
 
-  // ✅ গ্রুপ চ্যাট শুরু করা
+
   void _startGroupChat(String chatId, String groupName) {
     Navigator.push(
       context,
@@ -72,7 +67,7 @@ class _ChatsViewState extends State<ChatsView> {
     );
   }
 
-  // ✅ গ্রুপ তৈরির স্ক্রিনে নেভিগেট করা
+
   void _navigateToCreateGroup() {
     Navigator.push(
       context,
@@ -117,7 +112,7 @@ class _ChatsViewState extends State<ChatsView> {
                       );
                     },
                   ),
-                  // ✅ গ্রুপ তৈরির আইকন এখন নতুন স্ক্রিনে নিয়ে যাবে
+
                   IconButton(
                     icon: Icon(Icons.group_add_outlined, color: Theme.of(context).colorScheme.secondary),
                     onPressed: _navigateToCreateGroup,
@@ -163,7 +158,7 @@ class _ChatsViewState extends State<ChatsView> {
                     final chatDoc = chatDocs[index].data() as Map<String, dynamic>?;
                     final chatId = chatDocs[index].id;
 
-                    final isGroup = chatDoc?['isGroup'] ?? false; // ✅ নতুন: গ্রুপ চ্যাট নাকি ১-টু-১?
+                    final isGroup = chatDoc?['isGroup'] ?? false;
 
                     // --- NESTED STREAMBUILDER for Real-Time Last Message ---
                     return StreamBuilder<QuerySnapshot>(
@@ -216,7 +211,7 @@ class _ChatsViewState extends State<ChatsView> {
                           );
                         }
 
-                        // --- B. ওয়ান-টু-ওয়ান চ্যাট ডিসপ্লে (পুরোনো লজিক) ---
+
                         else {
                           final members = chatDoc?['members'] as List<dynamic>?;
                           if (members == null || members.length != 2) return const SizedBox.shrink();

@@ -14,7 +14,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
   bool loading = false;
-  // ✅ নতুন স্টেট: পাসওয়ার্ড ভিসিবিলিটি ট্র্যাক করার জন্য
+
   bool _isPasswordVisible = false;
 
 
@@ -25,22 +25,21 @@ class _LoginScreenState extends State<LoginScreen> {
         email: emailCtrl.text.trim(),
         password: passCtrl.text.trim(),
       );
-      // Navigate to HomeScreen on successful login
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } catch (e) {
-      // ✅ সংশোধিত error handling
+
       String errorMessage = "Login failed. Please check your network connection.";
 
       if (e is FirebaseAuthException) {
-        // user-not-found, wrong-password, invalid-email, or invalid-credential
-        // এই error codeগুলি সাধারণত বোঝায় যে ইউজারনেম/পাসওয়ার্ড ভুল বা অ্যাকাউন্ট নেই।
+
         if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-email' || e.code == 'invalid-credential') {
           errorMessage = "This email and password combination is not registered.";
         } else {
-          // অন্যান্য Firebase Authentication error (e.g., too-many-requests)
+
           errorMessage = e.message ?? "Authentication failed.";
         }
       } else {
@@ -115,15 +114,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 20),
-                // ✅ পাসওয়ার্ড ফিল্ড: এখন পাসওয়ার্ড ভিসিবিলিটি স্ট্যাটাস ব্যবহার করবে
+
                 _buildInputField(
                   context,
                   controller: passCtrl,
                   hintText: 'Password',
                   icon: Icons.lock_outline,
-                  obscureText: !_isPasswordVisible, // স্টেট অনুযায়ী ভ্যালু
-                  isPasswordField: true, // নতুন ফ্লাগ যোগ
-                  onVisibilityToggle: () { // টগল ফাংশন পাস
+                  obscureText: !_isPasswordVisible,
+                  isPasswordField: true,
+                  onVisibilityToggle: () {
                     setState(() {
                       _isPasswordVisible = !_isPasswordVisible;
                     });
@@ -162,14 +161,14 @@ class _LoginScreenState extends State<LoginScreen> {
         required IconData icon,
         bool obscureText = false,
         TextInputType keyboardType = TextInputType.text,
-        // ✅ নতুন প্যারামিটার
+
         bool isPasswordField = false,
         VoidCallback? onVisibilityToggle,
       }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      // ✅ obscureText এখন প্যারামিটার থেকে মান নেবে
+
       obscureText: obscureText,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
@@ -177,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
         hintStyle: TextStyle(color: Colors.grey.shade600),
         prefixIcon: Icon(icon, color: Colors.grey.shade500),
 
-        // ✅ Suffix Icon যোগ করা হলো
+
         suffixIcon: isPasswordField
             ? IconButton(
           icon: Icon(

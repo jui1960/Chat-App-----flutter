@@ -96,8 +96,7 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       );
 
-      // IMPORTANT: If Firestore save failed BUT Auth succeeded, log out the user
-      // This prevents a 'ghost' user stuck between Auth and Firestore.
+
       if (userCredential != null) {
         await FirebaseAuth.instance.signOut();
       }

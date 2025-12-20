@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chat_app/screens/chat_screen.dart';
-// ইমপোর্ট পাথ সংশোধন করা হলো (widgets ফোল্ডার ধরে নেওয়া হয়েছে)
 import '../widgets/avatar_with_letter.dart';
 
 class SearchScreen extends StatefulWidget {

@@ -69,7 +69,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       ),
       body: Column(
         children: [
-          // A. গ্রূপের নাম লেখার সেকশন
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -87,7 +86,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             ),
           ),
 
-          // B. সার্চ এবং নির্বাচিত মেম্বার সেকশন
           Padding(
             padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 8.0),
             child: Row(
@@ -103,7 +101,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      // নির্বাচিত সদস্যদের ট্যাগ
                       ..._selectedMembers.map((user) => Chip(
                         label: Text(user.displayName),
                         backgroundColor: primaryColor.withOpacity(0.1),
@@ -111,7 +108,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                         onDeleted: () => _toggleMemberSelection(user),
                       )).toList(),
 
-                      // সার্চ ফিল্ড
                       SizedBox(
                         width: 150,
                         child: TextField(
@@ -135,7 +131,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
 
-          // C. ইউজার লিস্ট (সার্চ ফিল্টার সহ)
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _firestore
@@ -158,10 +153,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                 final searchQuery = _searchController.text.toLowerCase();
 
                 final filteredUsers = users.where((user) {
-                  // displayName গেটারটি নন-নাল ভ্যালু নিশ্চিত করে
                   final displayName = user.displayName.toLowerCase();
-
-                  // email এবং username নাল হতে পারে, তাই নাল সেফটি অপারেটর ব্যবহার করা হয়েছে
                   final email = user.email?.toLowerCase() ?? '';
                   final username = user.username?.toLowerCase() ?? '';
 
@@ -176,7 +168,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                 if (filteredUsers.isEmpty && searchQuery.isNotEmpty) {
                   return Center(child: Text('No users matching "$searchQuery" found.'));
                 } else if (filteredUsers.isEmpty && searchQuery.isEmpty) {
-                  // সার্চ বক্স খালি থাকা সত্ত্বেও যদি কোন ইউজার না আসে
                   return const Center(child: Text('No users available to add.'));
                 }
 
@@ -207,7 +198,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             ),
           ),
 
-          // D. Create Group Button
           Padding(
             padding: EdgeInsets.only(
               left: 16.0,

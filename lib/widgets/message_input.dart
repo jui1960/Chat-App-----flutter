@@ -1,27 +1,22 @@
-// lib/widgets/message_input.dart (FINAL CODE FOR 1-to-1 & GROUP CHAT)
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class MessageInput extends StatelessWidget {
   final String chatId;
-  // ✅ গ্রুপ চ্যাট ফ্ল্যাগ যোগ করা হলো
   final bool isGroupChat;
 
   const MessageInput({
     super.key,
     required this.chatId,
-    this.isGroupChat = false, // ডিফল্ট 1-to-1 চ্যাট
+    this.isGroupChat = false,
   });
 
-  // existing function: chatId থেকে peerId বের করা (user1_user2 ফরম্যাট ধরে)
   String _getPeerId(String currentUserId, String fullChatId) {
     final ids = fullChatId.split('_');
     return ids.firstWhere((id) => id != currentUserId, orElse: () => '');
   }
 
-  // New function to handle sending message logic (Unified for 1-to-1 and Group)
   void _sendMessage(BuildContext context, TextEditingController controller) async {
     final messageText = controller.text.trim();
     if (messageText.isEmpty) return;
@@ -37,7 +32,6 @@ class MessageInput extends StatelessWidget {
     final currentUserId = user.uid;
     String? peerId;
 
-    // 1. peerId লজিক (শুধুমাত্র 1-to-1 চ্যাটের জন্য)
     if (!isGroupChat) {
       peerId = _getPeerId(currentUserId, chatId);
       if (peerId!.isEmpty) {
@@ -50,7 +44,6 @@ class MessageInput extends StatelessWidget {
       'text': messageText,
       'timestamp': Timestamp.now(),
       'senderId': currentUserId,
-      // গ্রুপ চ্যাটের জন্য senderName আবশ্যক
       'senderName': user.displayName ?? 'Anonymous',
     };
 
@@ -58,32 +51,26 @@ class MessageInput extends StatelessWidget {
       final firestore = FirebaseFirestore.instance;
       final chatRef = firestore.collection('chats').doc(chatId);
 
-      // 2. Save the message to Firestore
-      await chatRef
-          .collection('messages')
-          .add(data);
+      await chatRef.collection('messages').add(data);
 
-      // 3. মেইন চ্যাট ডক তৈরি/আপডেট করা হলো
       final updateData = {
         'lastMessage': messageText,
         'lastMessageTime': Timestamp.now(),
-        'isGroup': isGroupChat, // ফ্ল্যাগ সেট করা হলো
+        'isGroup': isGroupChat,
       };
 
-      // শুধুমাত্র 1-to-1 চ্যাটের জন্য members অ্যারে আপডেট করা
       if (!isGroupChat && peerId != null) {
         updateData['members'] = [currentUserId, peerId];
       }
 
       await chatRef.set(updateData, SetOptions(merge: true));
 
-      // 4. Clear the input field
       controller.clear();
 
     } catch (e) {
       debugPrint('Error sending message: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send message.')),
+        const SnackBar(content: Text('Failed to send message.')),
       );
     }
   }
@@ -105,7 +92,7 @@ class MessageInput extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 1. Camera Icon (Leftmost)
+          // 1. Camera Icon
           IconButton(
             icon: Icon(Icons.camera_alt_outlined, color: primaryColor),
             padding: const EdgeInsets.only(left: 5, right: 0),
@@ -115,7 +102,7 @@ class MessageInput extends StatelessWidget {
             },
           ),
 
-          // 2. Voice Record Icon (Next to Camera)
+          // 2. Voice Record Icon
           IconButton(
             icon: Icon(Icons.mic_none, color: primaryColor),
             padding: const EdgeInsets.only(left: 0, right: 5),
@@ -127,7 +114,7 @@ class MessageInput extends StatelessWidget {
           Expanded(
             child: Container(
               padding: const EdgeInsets.only(left: 10),
-              height: 45,
+              constraints: const BoxConstraints(minHeight: 45, maxHeight: 150),
               decoration: BoxDecoration(
                 color: inputFillColor,
                 borderRadius: BorderRadius.circular(30),
@@ -135,7 +122,6 @@ class MessageInput extends StatelessWidget {
               ),
               child: TextField(
                 controller: controller,
-                // Use the new send message function
                 onSubmitted: (_) => _sendMessage(context, controller),
                 style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
                 decoration: InputDecoration(
@@ -146,12 +132,14 @@ class MessageInput extends StatelessWidget {
                   suffixIcon: IconButton(
                     icon: Icon(Icons.attach_file, color: primaryColor, size: 20),
                     onPressed: () {
-                      // TODO: Handle attachment/file picker
+
                     },
                   ),
                 ),
                 minLines: 1,
                 maxLines: 5,
+                maxLength: 5000,
+                buildCounter: (BuildContext context, {required int currentLength, required int? maxLength, required bool isFocused}) => null,
               ),
             ),
           ),
@@ -165,7 +153,6 @@ class MessageInput extends StatelessWidget {
             ),
             child: IconButton(
               icon: const Icon(Icons.send, color: Colors.white),
-              // Use the new send message function
               onPressed: () => _sendMessage(context, controller),
             ),
           ),
