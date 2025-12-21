@@ -68,29 +68,32 @@ class MessageBubble extends StatelessWidget {
             final messageText = messageData['text'] ?? '';
             final timestamp = messageData['timestamp'] as Timestamp;
 
-            // টাইমস্ট্যাম্প দেখানোর লজিক
+            // টাইমস্ট্যাম্প দেখানোর জন্য নতুন লজিক
             bool shouldShowTime = false;
-            final nextIndex = index + 1;
+            final previousIndex = index + 1; // ListView.builder উল্টো (reverse: true) তাই index+1 হলো "পূর্ববর্তী" মেসেজ
 
             if (index == 0) {
-              // প্রথম মেসেজ সবসময় টাইম দেখাবে
+              // সর্বশেষ মেসেজ (যা সবার উপরে থাকে) সবসময় টাইম দেখাবে
               shouldShowTime = true;
-            } else if (nextIndex < loadedMessages.length) {
-              final nextMessageSenderId = loadedMessages[nextIndex].get('senderId');
-              final nextMessageTime = loadedMessages[nextIndex].get('timestamp') as Timestamp;
+            } else if (previousIndex < loadedMessages.length) {
+              final previousMessageSenderId = loadedMessages[previousIndex].get('senderId');
+              final previousMessageTime = loadedMessages[previousIndex].get('timestamp') as Timestamp;
 
-              // যদি পরবর্তী মেসেজ অন্য সেন্ডারের হয়
-              if (nextMessageSenderId != currentSenderId) {
+              // পূর্ববর্তী মেসেজ যদি অন্য সেন্ডারের হয়
+              if (previousMessageSenderId != currentSenderId) {
                 shouldShowTime = true;
               } else {
-                // একই সেন্ডার হলেও, যদি দুটি মেসেজের মধ্যে সময়ের ব্যবধান বেশি হয় (যেমন ৫ মিনিট), তবে টাইম দেখাবে
-                final difference = timestamp.toDate().difference(nextMessageTime.toDate()).inMinutes;
+                // সেন্ডার একই হলেও, সময়ের ব্যবধান যদি 5 মিনিটের বেশি হয়
+                // দুটি মেসেজের মধ্যে সময়ের ব্যবধান
+                final difference = previousMessageTime.toDate().difference(timestamp.toDate()).inMinutes;
+
                 if (difference > 5) {
                   shouldShowTime = true;
                 }
+                // যদি সেন্ডার একই হয় এবং সময়ের ব্যবধান 5 মিনিটের কম হয়, তবে shouldShowTime = false থাকবে (ডিফল্ট)
               }
-            } else if (nextIndex == loadedMessages.length) {
-              // যদি শেষ মেসেজ হয়
+            } else if (previousIndex == loadedMessages.length) {
+              // যদি এই মেসেজটি লিস্টের প্রথম মেসেজ হয়
               shouldShowTime = true;
             }
 
@@ -150,6 +153,7 @@ class _MessageBubbleContent extends StatelessWidget {
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(12),
               topRight: const Radius.circular(12),
+
               bottomLeft: isMe ? const Radius.circular(12) : const Radius.circular(4),
               bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(12),
             ),
