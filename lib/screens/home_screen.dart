@@ -1,5 +1,3 @@
-// lib/screens/home_screen.dart (FINAL UPDATED CODE)
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -192,7 +190,6 @@ class _ChatsViewState extends State<ChatsView> {
 
                           return ListTile(
                             contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                            // ✅ নতুন: গ্রুপ আভাটার উইজেট ব্যবহার
                             leading: GroupAvatar(
                               groupName: groupName,
                               initials: initialsList,
@@ -207,7 +204,7 @@ class _ChatsViewState extends State<ChatsView> {
                             ),
                             trailing: Text(lastTime,
                                 style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey.shade600 : Colors.grey)),
-                            onTap: () => _startGroupChat(chatId, groupName), // ✅ গ্রুপ চ্যাট শুরু করা
+                            onTap: () => _startGroupChat(chatId, groupName),
                           );
                         }
 
@@ -279,15 +276,7 @@ class _ChatsViewState extends State<ChatsView> {
                                   children: [
                                     Text(lastTime,
                                         style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey.shade600 : Colors.grey)),
-                                    const SizedBox(height: 4),
-                                    if (userStatus.isNotEmpty)
-                                      Text(
-                                          userStatus,
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              color: isOnline ? Colors.green : Colors.grey
-                                          )
-                                      ),
+                                    // Removed userStatus/Last Seen display from the home screen here
                                   ],
                                 ),
                                 onTap: () => _startChat(peerId, defaultUsername, userImageUrl, userStatus),

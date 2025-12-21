@@ -12,6 +12,28 @@ class MessageBubble extends StatelessWidget {
     required this.chatId,
   });
 
+  // এই ফাংশনটি টাইমস্ট্যাম্পকে একটি উইজেট হিসেবে রেন্ডার করে
+  Widget _buildTimeWidget(Timestamp timestamp, bool isMe, BuildContext context) {
+    final timeString = DateFormat('h:mm a').format(timestamp.toDate());
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: isMe ? 0 : 16,
+        right: isMe ? 16 : 0,
+        bottom: 8,
+        top: 2,
+      ),
+      child: Text(
+        timeString,
+        style: TextStyle(
+          fontSize: 10,
+          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
@@ -46,15 +68,47 @@ class MessageBubble extends StatelessWidget {
             final messageText = messageData['text'] ?? '';
             final timestamp = messageData['timestamp'] as Timestamp;
 
+            // টাইমস্ট্যাম্প দেখানোর লজিক
+            bool shouldShowTime = false;
+            final nextIndex = index + 1;
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2.0),
-              child: _MessageBubbleContent(
-                key: ValueKey(message.id),
-                message: messageText,
-                isMe: isMe,
-                timestamp: timestamp,
-              ),
+            if (index == 0) {
+              // প্রথম মেসেজ সবসময় টাইম দেখাবে
+              shouldShowTime = true;
+            } else if (nextIndex < loadedMessages.length) {
+              final nextMessageSenderId = loadedMessages[nextIndex].get('senderId');
+              final nextMessageTime = loadedMessages[nextIndex].get('timestamp') as Timestamp;
+
+              // যদি পরবর্তী মেসেজ অন্য সেন্ডারের হয়
+              if (nextMessageSenderId != currentSenderId) {
+                shouldShowTime = true;
+              } else {
+                // একই সেন্ডার হলেও, যদি দুটি মেসেজের মধ্যে সময়ের ব্যবধান বেশি হয় (যেমন ৫ মিনিট), তবে টাইম দেখাবে
+                final difference = timestamp.toDate().difference(nextMessageTime.toDate()).inMinutes;
+                if (difference > 5) {
+                  shouldShowTime = true;
+                }
+              }
+            } else if (nextIndex == loadedMessages.length) {
+              // যদি শেষ মেসেজ হয়
+              shouldShowTime = true;
+            }
+
+
+            return Column(
+              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2.0),
+                  child: _MessageBubbleContent(
+                    key: ValueKey(message.id),
+                    message: messageText,
+                    isMe: isMe,
+                  ),
+                ),
+                // মেসেজ বাবলের নিচে টাইমস্ট্যাম্প দেখানো
+                if (shouldShowTime) _buildTimeWidget(timestamp, isMe, context),
+              ],
             );
           },
         );
@@ -69,12 +123,10 @@ class _MessageBubbleContent extends StatelessWidget {
     super.key,
     required this.message,
     required this.isMe,
-    required this.timestamp,
   });
 
   final String message;
   final bool isMe;
-  final Timestamp timestamp;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +140,6 @@ class _MessageBubbleContent extends StatelessWidget {
         ? Colors.white
         : (isDarkMode ? Colors.white : Colors.black);
 
-    final timeString = DateFormat('jm').format(timestamp.toDate());
 
     return Row(
       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -106,25 +157,12 @@ class _MessageBubbleContent extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                message,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                timeString,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isMe ? Colors.white70 : Colors.black54,
-                ),
-              ),
-            ],
+          child: Text(
+            message,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 15,
+            ),
           ),
         ),
       ],
