@@ -12,7 +12,7 @@ class MessageBubble extends StatelessWidget {
     required this.chatId,
   });
 
-  // এই ফাংশনটি টাইমস্ট্যাম্পকে একটি উইজেট হিসেবে রেন্ডার করে
+
   Widget _buildTimeWidget(Timestamp timestamp, bool isMe, BuildContext context) {
     final timeString = DateFormat('h:mm a').format(timestamp.toDate());
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -68,32 +68,31 @@ class MessageBubble extends StatelessWidget {
             final messageText = messageData['text'] ?? '';
             final timestamp = messageData['timestamp'] as Timestamp;
 
-            // টাইমস্ট্যাম্প দেখানোর জন্য নতুন লজিক
+
             bool shouldShowTime = false;
-            final previousIndex = index + 1; // ListView.builder উল্টো (reverse: true) তাই index+1 হলো "পূর্ববর্তী" মেসেজ
+            final previousIndex = index + 1;
 
             if (index == 0) {
-              // সর্বশেষ মেসেজ (যা সবার উপরে থাকে) সবসময় টাইম দেখাবে
+
               shouldShowTime = true;
             } else if (previousIndex < loadedMessages.length) {
               final previousMessageSenderId = loadedMessages[previousIndex].get('senderId');
               final previousMessageTime = loadedMessages[previousIndex].get('timestamp') as Timestamp;
 
-              // পূর্ববর্তী মেসেজ যদি অন্য সেন্ডারের হয়
+
               if (previousMessageSenderId != currentSenderId) {
                 shouldShowTime = true;
               } else {
-                // সেন্ডার একই হলেও, সময়ের ব্যবধান যদি 5 মিনিটের বেশি হয়
-                // দুটি মেসেজের মধ্যে সময়ের ব্যবধান
+
                 final difference = previousMessageTime.toDate().difference(timestamp.toDate()).inMinutes;
 
                 if (difference > 5) {
                   shouldShowTime = true;
                 }
-                // যদি সেন্ডার একই হয় এবং সময়ের ব্যবধান 5 মিনিটের কম হয়, তবে shouldShowTime = false থাকবে (ডিফল্ট)
+
               }
             } else if (previousIndex == loadedMessages.length) {
-              // যদি এই মেসেজটি লিস্টের প্রথম মেসেজ হয়
+
               shouldShowTime = true;
             }
 
@@ -109,7 +108,7 @@ class MessageBubble extends StatelessWidget {
                     isMe: isMe,
                   ),
                 ),
-                // মেসেজ বাবলের নিচে টাইমস্ট্যাম্প দেখানো
+
                 if (shouldShowTime) _buildTimeWidget(timestamp, isMe, context),
               ],
             );
