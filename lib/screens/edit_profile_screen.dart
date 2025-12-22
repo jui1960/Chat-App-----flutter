@@ -80,7 +80,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Profile Name'),
+        title: const Text('Edit your Profile Name'),
         backgroundColor: isDarkMode ? Theme.of(context).appBarTheme.backgroundColor : primaryColor,
         foregroundColor: Colors.white,
       ),

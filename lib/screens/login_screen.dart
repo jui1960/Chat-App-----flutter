@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (e is FirebaseAuthException) {
 
         if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-email' || e.code == 'invalid-credential') {
-          errorMessage = "This email and password combination is not registered.";
+          errorMessage = "We couldn’t find an account with this email and password.";
         } else {
 
           errorMessage = e.message ?? "Authentication failed.";
