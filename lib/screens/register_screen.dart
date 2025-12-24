@@ -16,7 +16,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
   bool loading = false;
-  // ✅ নতুন স্টেট: পাসওয়ার্ড ভিসিবিলিটি ট্র্যাক করার জন্য
+
   bool _isPasswordVisible = false;
 
   void signup() async {
@@ -50,40 +50,40 @@ class _SignupScreenState extends State<SignupScreen> {
 
       final user = userCredential.user;
       final fullName = nameCtrl.text.trim();
-      final lowerCaseUsername = fullName.toLowerCase(); // সব lowercase এ পরিবর্তন করা
+      final lowerCaseUsername = fullName.toLowerCase();
 
-      // 2. Update display name in Firebase Auth
+
       await user?.updateDisplayName(fullName);
 
-      // 3. Save user data to Firestore 'users' collection
+
       if (user != null) {
         final userData = {
-          'username': lowerCaseUsername, // Lowercase field for search
-          'fullName': fullName,         // Original casing for display
+          'username': lowerCaseUsername,
+          'fullName': fullName,
           'email': user.email,
-          'imageUrl': 'https://via.placeholder.com/150', // Default image
+          'imageUrl': 'https://via.placeholder.com/150',
           'userId': user.uid,
           'createdAt': Timestamp.now(),
         };
 
-        // Save data to Firestore using UID as the Document ID
+
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .set(userData);
       }
 
-      // 4. Navigate to HomeScreen on successful registration
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
 
     } catch (e) {
-      // If registration fails, show detailed error
+
       String errorMessage = "Registration failed. Please check your details.";
       if (e is FirebaseAuthException) {
-        // Specific error handling for better user feedback
+
         errorMessage = e.message ?? "Authentication failed.";
       } else {
         errorMessage = e.toString();
@@ -153,7 +153,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     size: 60, color: primaryColor),
                 const SizedBox(height: 10),
                 const Text(
-                  'Join Chat App',
+                  'Join Connectify',
                   style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.bold,
@@ -240,7 +240,7 @@ class _SignupScreenState extends State<SignupScreen> {
         hintStyle: TextStyle(color: Colors.grey.shade600),
         prefixIcon: Icon(icon, color: Colors.grey.shade500),
 
-        // ✅ Suffix Icon যোগ করা হলো
+
         suffixIcon: isPasswordField
             ? IconButton(
           icon: Icon(
@@ -269,7 +269,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // --- HELPER FUNCTION: Signup Button (Unchanged) ---
+
   Widget _buildSignupButton(BuildContext context, VoidCallback onPressed) {
     return Container(
       width: double.infinity,
