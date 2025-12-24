@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.white),
                 ),
                 const Text(
-                  'Sign in to continue',
+                  'Log in to Connectify',
                   style: TextStyle(fontSize: 16, color: Colors.grey),
                 ),
                 const SizedBox(height: 40),
